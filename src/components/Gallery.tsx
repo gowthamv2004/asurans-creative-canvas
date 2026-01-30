@@ -7,6 +7,8 @@ import {
   DialogHeader,
   DialogTitle,
 } from "@/components/ui/dialog";
+import { downloadImage } from "@/lib/imageUtils";
+import { toast } from "sonner";
 
 interface GalleryImage {
   id: string;
@@ -24,6 +26,15 @@ interface GalleryProps {
 
 const Gallery = ({ images, onEnhance, onDelete }: GalleryProps) => {
   const [selectedImage, setSelectedImage] = useState<GalleryImage | null>(null);
+
+  const handleDownload = async (image: GalleryImage) => {
+    try {
+      await downloadImage(image.url, `asuran-${image.style.toLowerCase()}`);
+      toast.success("Image downloaded!");
+    } catch (error) {
+      toast.error("Failed to download image");
+    }
+  };
 
   if (images.length === 0) {
     return (
@@ -57,7 +68,7 @@ const Gallery = ({ images, onEnhance, onDelete }: GalleryProps) => {
         {images.map((image) => (
           <div
             key={image.id}
-            className="image-card aspect-square animate-fade-in"
+            className="image-card aspect-square animate-fade-in group"
           >
             <img
               src={image.url}
@@ -80,6 +91,14 @@ const Gallery = ({ images, onEnhance, onDelete }: GalleryProps) => {
                     onClick={() => setSelectedImage(image)}
                   >
                     <Maximize2 className="w-4 h-4 text-white" />
+                  </Button>
+                  <Button
+                    size="icon"
+                    variant="ghost"
+                    className="h-8 w-8 hover:bg-white/20"
+                    onClick={() => handleDownload(image)}
+                  >
+                    <Download className="w-4 h-4 text-white" />
                   </Button>
                   <Button
                     size="icon"
@@ -134,7 +153,12 @@ const Gallery = ({ images, onEnhance, onDelete }: GalleryProps) => {
                     {selectedImage.style}
                   </span>
                   <div className="flex gap-2">
-                    <Button size="sm" variant="secondary" className="gap-2">
+                    <Button
+                      size="sm"
+                      variant="secondary"
+                      className="gap-2"
+                      onClick={() => handleDownload(selectedImage)}
+                    >
                       <Download className="w-4 h-4" />
                       Download
                     </Button>

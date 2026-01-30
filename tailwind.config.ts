@@ -54,7 +54,7 @@ export default {
         glow: {
           primary: "hsl(var(--glow-primary))",
           accent: "hsl(var(--glow-accent))",
-          pink: "hsl(var(--glow-pink))",
+          warm: "hsl(var(--glow-warm))",
         },
         sidebar: {
           DEFAULT: "hsl(var(--sidebar-background))",
@@ -103,8 +103,8 @@ export default {
       },
       backgroundImage: {
         "gradient-radial": "radial-gradient(var(--tw-gradient-stops))",
-        "hero-gradient": "linear-gradient(135deg, hsl(270 95% 65%), hsl(330 90% 60%), hsl(190 95% 55%))",
-        "card-gradient": "linear-gradient(145deg, hsl(240 10% 8%), hsl(240 10% 5%))",
+        "hero-gradient": "linear-gradient(135deg, hsl(38 92% 50%), hsl(30 90% 55%), hsl(45 100% 60%))",
+        "card-gradient": "linear-gradient(145deg, hsl(20 14% 9%), hsl(20 14% 5%))",
       },
     },
   },

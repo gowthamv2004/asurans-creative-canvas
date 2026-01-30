@@ -21,7 +21,7 @@ const Header = ({ activeTab, onTabChange }: HeaderProps) => {
           <div className="flex items-center gap-3">
             <div className="relative">
               <div className="w-10 h-10 rounded-xl bg-hero-gradient flex items-center justify-center animate-pulse-glow">
-                <Image className="w-5 h-5 text-white" />
+                <Image className="w-5 h-5 text-primary-foreground" />
               </div>
             </div>
             <div>
@@ -40,7 +40,7 @@ const Header = ({ activeTab, onTabChange }: HeaderProps) => {
                 onClick={() => onTabChange(item.id)}
                 className={`flex items-center gap-2 px-4 py-2 rounded-full text-sm font-medium transition-all duration-300 ${
                   activeTab === item.id
-                    ? "bg-hero-gradient text-white shadow-lg"
+                    ? "bg-hero-gradient text-primary-foreground shadow-lg"
                     : "text-muted-foreground hover:text-foreground hover:bg-white/5"
                 }`}
               >
@@ -58,7 +58,7 @@ const Header = ({ activeTab, onTabChange }: HeaderProps) => {
                 onClick={() => onTabChange(item.id)}
                 className={`p-2 rounded-full transition-all duration-300 ${
                   activeTab === item.id
-                    ? "bg-hero-gradient text-white"
+                    ? "bg-hero-gradient text-primary-foreground"
                     : "text-muted-foreground"
                 }`}
               >
