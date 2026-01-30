@@ -1,5 +1,5 @@
 import { useState } from "react";
-import { Video, Loader2, Play, Pause, Download, Clock } from "lucide-react";
+import { Video, Loader2, Play, Pause, Download, Clock, AlertCircle } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Textarea } from "@/components/ui/textarea";
 import { Slider } from "@/components/ui/slider";
@@ -28,12 +28,12 @@ const VideoGenerator = () => {
 
     setIsGenerating(true);
     
-    // Simulate video generation
+    // Simulate video generation - in a real implementation, this would call an API
     await new Promise((resolve) => setTimeout(resolve, 3000));
 
     const newVideo: GeneratedVideo = {
       id: Date.now().toString(),
-      url: "https://www.w3schools.com/html/mov_bbb.mp4", // Sample video
+      url: "https://www.w3schools.com/html/mov_bbb.mp4",
       prompt: prompt,
       duration: duration[0],
       timestamp: new Date(),
@@ -59,6 +59,16 @@ const VideoGenerator = () => {
           Create stunning videos from text descriptions. Perfect for social media,
           presentations, and creative projects.
         </p>
+      </div>
+
+      {/* Info Banner */}
+      <div className="max-w-4xl mx-auto">
+        <div className="flex items-center gap-3 p-4 rounded-xl bg-accent/10 border border-accent/20">
+          <AlertCircle className="w-5 h-5 text-accent flex-shrink-0" />
+          <p className="text-sm text-muted-foreground">
+            Video generation is currently in preview mode. Full AI video generation will be available soon!
+          </p>
+        </div>
       </div>
 
       {/* Generator Card */}
@@ -103,7 +113,7 @@ const VideoGenerator = () => {
         <Button
           onClick={handleGenerate}
           disabled={isGenerating || !prompt.trim()}
-          className="w-full h-14 text-lg font-semibold bg-accent hover:bg-accent/90"
+          className="w-full h-14 text-lg font-semibold bg-accent hover:bg-accent/90 text-accent-foreground"
         >
           {isGenerating ? (
             <>
