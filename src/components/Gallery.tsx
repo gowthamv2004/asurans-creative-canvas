@@ -1,5 +1,5 @@
 import { useState } from "react";
-import { Download, Maximize2, Trash2, Zap, X } from "lucide-react";
+import { Download, Maximize2, Trash2, Zap, X, Star } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import {
   Dialog,
@@ -9,30 +9,43 @@ import {
 } from "@/components/ui/dialog";
 import { downloadImage } from "@/lib/imageUtils";
 import { toast } from "sonner";
-
-interface GalleryImage {
-  id: string;
-  url: string;
-  prompt: string;
-  style: string;
-  timestamp: Date;
-}
+import { useAuth } from "@/hooks/useAuth";
+import { useGeneratedImages, GeneratedImage } from "@/hooks/useGeneratedImages";
 
 interface GalleryProps {
-  images: GalleryImage[];
-  onEnhance: (image: GalleryImage) => void;
+  images: GeneratedImage[];
+  onEnhance: (image: GeneratedImage) => void;
   onDelete: (id: string) => void;
 }
 
-const Gallery = ({ images, onEnhance, onDelete }: GalleryProps) => {
-  const [selectedImage, setSelectedImage] = useState<GalleryImage | null>(null);
+const Gallery = ({ images: propImages, onEnhance, onDelete }: GalleryProps) => {
+  const [selectedImage, setSelectedImage] = useState<GeneratedImage | null>(null);
+  const { isAuthenticated } = useAuth();
+  const { images: dbImages, toggleFavorite, deleteImage } = useGeneratedImages();
 
-  const handleDownload = async (image: GalleryImage) => {
+  // Use database images if authenticated, otherwise use prop images
+  const images = isAuthenticated ? dbImages : propImages;
+
+  const handleDownload = async (image: GeneratedImage) => {
     try {
       await downloadImage(image.url, `asuran-${image.style.toLowerCase()}`);
       toast.success("Image downloaded!");
-    } catch (error) {
+    } catch {
       toast.error("Failed to download image");
+    }
+  };
+
+  const handleToggleFavorite = async (id: string) => {
+    if (isAuthenticated) {
+      await toggleFavorite(id);
+    }
+  };
+
+  const handleDelete = async (id: string) => {
+    if (isAuthenticated) {
+      await deleteImage(id);
+    } else {
+      onDelete(id);
     }
   };
 
@@ -47,6 +60,11 @@ const Gallery = ({ images, onEnhance, onDelete }: GalleryProps) => {
           Start generating images and they'll appear here. Build your collection
           of AI-created masterpieces!
         </p>
+        {!isAuthenticated && (
+          <p className="text-sm text-muted-foreground">
+            <a href="/auth" className="text-primary hover:underline">Sign in</a> to save your generated images permanently
+          </p>
+        )}
       </div>
     );
   }
@@ -68,13 +86,27 @@ const Gallery = ({ images, onEnhance, onDelete }: GalleryProps) => {
         {images.map((image) => (
           <div
             key={image.id}
-            className="image-card aspect-square animate-fade-in group"
+            className="image-card aspect-square animate-fade-in group relative overflow-hidden rounded-xl"
           >
             <img
               src={image.url}
               alt={image.prompt}
               className="w-full h-full object-cover"
             />
+            
+            {/* Favorite Badge */}
+            {image.isFavorite && (
+              <div className="absolute top-2 right-2 z-10">
+                <Star className="w-5 h-5 fill-primary text-primary" />
+              </div>
+            )}
+
+            {/* Generation Type Badge */}
+            {image.generationType && image.generationType !== "text-to-image" && (
+              <div className="absolute top-2 left-2 z-10 px-2 py-1 rounded-full bg-black/50 backdrop-blur-sm text-xs text-white">
+                {image.generationType}
+              </div>
+            )}
             
             {/* Overlay */}
             <div className="absolute inset-0 bg-gradient-to-t from-black/80 via-transparent to-transparent opacity-0 group-hover:opacity-100 transition-all duration-300 flex flex-col justify-end p-4 z-10">
@@ -104,6 +136,14 @@ const Gallery = ({ images, onEnhance, onDelete }: GalleryProps) => {
                     size="icon"
                     variant="ghost"
                     className="h-8 w-8 hover:bg-white/20"
+                    onClick={() => handleToggleFavorite(image.id)}
+                  >
+                    <Star className={`w-4 h-4 ${image.isFavorite ? "fill-primary text-primary" : "text-white"}`} />
+                  </Button>
+                  <Button
+                    size="icon"
+                    variant="ghost"
+                    className="h-8 w-8 hover:bg-white/20"
                     onClick={() => onEnhance(image)}
                   >
                     <Zap className="w-4 h-4 text-white" />
@@ -112,7 +152,7 @@ const Gallery = ({ images, onEnhance, onDelete }: GalleryProps) => {
                     size="icon"
                     variant="ghost"
                     className="h-8 w-8 hover:bg-destructive/50"
-                    onClick={() => onDelete(image.id)}
+                    onClick={() => handleDelete(image.id)}
                   >
                     <Trash2 className="w-4 h-4 text-white" />
                   </Button>
