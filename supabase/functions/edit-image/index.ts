@@ -11,7 +11,7 @@ serve(async (req) => {
   }
 
   try {
-    const { prompt, style } = await req.json();
+    const { prompt, imageUrl, editType } = await req.json();
 
     if (!prompt) {
       return new Response(
@@ -25,12 +25,41 @@ serve(async (req) => {
       throw new Error("LOVABLE_API_KEY is not configured");
     }
 
-    // Build enhanced prompt with style
-    const enhancedPrompt = style 
-      ? `${prompt}. Style: ${style}. High quality, detailed, professional.`
-      : `${prompt}. High quality, detailed, professional.`;
+    let messages;
+    
+    if (imageUrl) {
+      // Image-to-image or editing mode
+      const editPrompt = editType === "vary" 
+        ? `Create a variation of this image: ${prompt}. Keep the same style and composition but add creative differences.`
+        : editType === "edit"
+        ? `Edit this image: ${prompt}`
+        : `Use this image as reference and create: ${prompt}`;
 
-    console.log("Generating image with prompt:", enhancedPrompt);
+      messages = [
+        {
+          role: "user",
+          content: [
+            {
+              type: "text",
+              text: editPrompt,
+            },
+            {
+              type: "image_url",
+              image_url: {
+                url: imageUrl,
+              },
+            },
+          ],
+        },
+      ];
+    } else {
+      return new Response(
+        JSON.stringify({ error: "Image URL is required for editing" }),
+        { status: 400, headers: { ...corsHeaders, "Content-Type": "application/json" } }
+      );
+    }
+
+    console.log("Editing image with prompt:", prompt, "type:", editType);
 
     const response = await fetch("https://ai.gateway.lovable.dev/v1/chat/completions", {
       method: "POST",
@@ -40,12 +69,7 @@ serve(async (req) => {
       },
       body: JSON.stringify({
         model: "google/gemini-3-pro-image-preview",
-        messages: [
-          {
-            role: "user",
-            content: enhancedPrompt,
-          },
-        ],
+        messages,
         modalities: ["image", "text"],
       }),
     });
@@ -69,28 +93,12 @@ serve(async (req) => {
     }
 
     const data = await response.json();
-    console.log("AI response received:", JSON.stringify(data.choices?.[0]?.message, null, 2));
+    console.log("AI response received");
 
-    // Extract the image from the response - check multiple possible locations
-    const message = data.choices?.[0]?.message;
-    let imageData = message?.images?.[0]?.image_url?.url;
-    
-    // Also check for inline_data format
-    if (!imageData && message?.content) {
-      // Check if content contains base64 image
-      const contentParts = Array.isArray(message.content) ? message.content : [message.content];
-      for (const part of contentParts) {
-        if (typeof part === 'object' && part.type === 'image' && part.image_url?.url) {
-          imageData = part.image_url.url;
-          break;
-        }
-      }
-    }
-
-    const textContent = typeof message?.content === 'string' ? message.content : "";
+    const imageData = data.choices?.[0]?.message?.images?.[0]?.image_url?.url;
+    const textContent = data.choices?.[0]?.message?.content || "";
 
     if (!imageData) {
-      console.error("Response structure:", JSON.stringify(data, null, 2));
       throw new Error("No image generated in response");
     }
 
@@ -103,10 +111,10 @@ serve(async (req) => {
       { headers: { ...corsHeaders, "Content-Type": "application/json" } }
     );
   } catch (error) {
-    console.error("Error generating image:", error);
+    console.error("Error editing image:", error);
     return new Response(
       JSON.stringify({ 
-        error: error instanceof Error ? error.message : "Failed to generate image" 
+        error: error instanceof Error ? error.message : "Failed to edit image" 
       }),
       { status: 500, headers: { ...corsHeaders, "Content-Type": "application/json" } }
     );

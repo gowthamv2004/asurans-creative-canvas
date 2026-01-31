@@ -5,14 +5,7 @@ import VideoGenerator from "@/components/VideoGenerator";
 import Gallery from "@/components/Gallery";
 import EnhancePanel from "@/components/EnhancePanel";
 import { toast } from "sonner";
-
-interface GeneratedImage {
-  id: string;
-  url: string;
-  prompt: string;
-  style: string;
-  timestamp: Date;
-}
+import { GeneratedImage } from "@/hooks/useGeneratedImages";
 
 const Index = () => {
   const [activeTab, setActiveTab] = useState("generate");

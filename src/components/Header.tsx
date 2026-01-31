@@ -1,4 +1,7 @@
-import { Sparkles, Image, Video, Grid3X3, Zap } from "lucide-react";
+import { Sparkles, Image, Video, Grid3X3, Zap, LogIn, LogOut, User } from "lucide-react";
+import { Button } from "@/components/ui/button";
+import { useAuth } from "@/hooks/useAuth";
+import { useNavigate } from "react-router-dom";
 
 interface HeaderProps {
   activeTab: string;
@@ -6,12 +9,19 @@ interface HeaderProps {
 }
 
 const Header = ({ activeTab, onTabChange }: HeaderProps) => {
+  const { user, isAuthenticated, signOut } = useAuth();
+  const navigate = useNavigate();
+
   const navItems = [
     { id: "generate", label: "Generate", icon: Sparkles },
     { id: "video", label: "Video", icon: Video },
     { id: "gallery", label: "Gallery", icon: Grid3X3 },
     { id: "enhance", label: "Enhance", icon: Zap },
   ];
+
+  const handleSignOut = async () => {
+    await signOut();
+  };
 
   return (
     <header className="fixed top-0 left-0 right-0 z-50 glass-card border-b border-white/5">
@@ -50,22 +60,72 @@ const Header = ({ activeTab, onTabChange }: HeaderProps) => {
             ))}
           </nav>
 
-          {/* Mobile nav */}
-          <nav className="flex md:hidden items-center gap-1 p-1 rounded-full bg-secondary/50">
-            {navItems.map((item) => (
-              <button
-                key={item.id}
-                onClick={() => onTabChange(item.id)}
-                className={`p-2 rounded-full transition-all duration-300 ${
-                  activeTab === item.id
-                    ? "bg-hero-gradient text-primary-foreground"
-                    : "text-muted-foreground"
-                }`}
+          {/* Auth Buttons */}
+          <div className="hidden md:flex items-center gap-2">
+            {isAuthenticated ? (
+              <>
+                <div className="flex items-center gap-2 px-3 py-1.5 rounded-full bg-secondary/50">
+                  <User className="w-4 h-4 text-primary" />
+                  <span className="text-sm text-muted-foreground">
+                    {user?.user_metadata?.display_name || user?.email?.split("@")[0]}
+                  </span>
+                </div>
+                <Button
+                  variant="outline"
+                  size="sm"
+                  onClick={handleSignOut}
+                  className="gap-2"
+                >
+                  <LogOut className="w-4 h-4" />
+                  Sign Out
+                </Button>
+              </>
+            ) : (
+              <Button
+                size="sm"
+                onClick={() => navigate("/auth")}
+                className="gap-2 btn-gradient"
               >
-                <item.icon className="w-5 h-5" />
+                <LogIn className="w-4 h-4" />
+                Sign In
+              </Button>
+            )}
+          </div>
+
+          {/* Mobile nav */}
+          <div className="flex md:hidden items-center gap-2">
+            <nav className="flex items-center gap-1 p-1 rounded-full bg-secondary/50">
+              {navItems.map((item) => (
+                <button
+                  key={item.id}
+                  onClick={() => onTabChange(item.id)}
+                  className={`p-2 rounded-full transition-all duration-300 ${
+                    activeTab === item.id
+                      ? "bg-hero-gradient text-primary-foreground"
+                      : "text-muted-foreground"
+                  }`}
+                >
+                  <item.icon className="w-5 h-5" />
+                </button>
+              ))}
+            </nav>
+            
+            {isAuthenticated ? (
+              <button
+                onClick={handleSignOut}
+                className="p-2 rounded-full bg-secondary/50 text-muted-foreground"
+              >
+                <LogOut className="w-5 h-5" />
               </button>
-            ))}
-          </nav>
+            ) : (
+              <button
+                onClick={() => navigate("/auth")}
+                className="p-2 rounded-full bg-hero-gradient text-primary-foreground"
+              >
+                <LogIn className="w-5 h-5" />
+              </button>
+            )}
+          </div>
         </div>
       </div>
     </header>
