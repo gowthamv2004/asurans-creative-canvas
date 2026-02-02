@@ -4,6 +4,7 @@ import ImageGenerator from "@/components/ImageGenerator";
 import VideoGenerator from "@/components/VideoGenerator";
 import Gallery from "@/components/Gallery";
 import EnhancePanel from "@/components/EnhancePanel";
+import BackgroundVideo from "@/components/BackgroundVideo";
 import { toast } from "sonner";
 import { GeneratedImage } from "@/hooks/useGeneratedImages";
 
@@ -28,12 +29,8 @@ const Index = () => {
 
   return (
     <div className="min-h-screen bg-background">
-      {/* Background Effects */}
-      <div className="fixed inset-0 pointer-events-none overflow-hidden">
-        <div className="absolute top-0 left-1/4 w-[500px] h-[500px] bg-glow-primary/20 rounded-full blur-[120px] animate-float" />
-        <div className="absolute bottom-0 right-1/4 w-[400px] h-[400px] bg-glow-accent/20 rounded-full blur-[100px] animate-float" style={{ animationDelay: "-3s" }} />
-        <div className="absolute top-1/2 left-1/2 -translate-x-1/2 -translate-y-1/2 w-[600px] h-[600px] bg-glow-warm/10 rounded-full blur-[150px]" />
-      </div>
+      {/* Background Video */}
+      <BackgroundVideo />
 
       <Header activeTab={activeTab} onTabChange={setActiveTab} />
 
