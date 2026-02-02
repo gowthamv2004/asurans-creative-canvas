@@ -224,19 +224,20 @@ const ImageGenerator = ({ onImageGenerated }: ImageGeneratorProps) => {
                     <X className="w-4 h-4" />
                   </button>
                 </div>
-              ) : (
-                <div
-                  onClick={() => fileInputRef.current?.click()}
-                  className="border-2 border-dashed border-white/20 rounded-xl p-6 text-center hover:border-primary/50 transition-colors cursor-pointer"
-                >
-                  <ImageIcon className="w-8 h-8 mx-auto text-muted-foreground mb-2" />
-                  <p className="text-sm text-muted-foreground">
-                    Click to upload a reference image for image-to-image generation
-                  </p>
-                </div>
-              )}
+               ) : (
+                 <label
+                   htmlFor="reference-image-upload"
+                   className="block border-2 border-dashed border-white/20 rounded-xl p-6 text-center hover:border-primary/50 transition-colors cursor-pointer"
+                 >
+                   <ImageIcon className="w-8 h-8 mx-auto text-muted-foreground mb-2" />
+                   <p className="text-sm text-muted-foreground">
+                     Click to upload a reference image for image-to-image generation
+                   </p>
+                 </label>
+               )}
               
               <input
+                 id="reference-image-upload"
                 ref={fileInputRef}
                 type="file"
                 accept="image/*"
