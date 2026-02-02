@@ -224,20 +224,34 @@ const ImageGenerator = ({ onImageGenerated }: ImageGeneratorProps) => {
                     <X className="w-4 h-4" />
                   </button>
                 </div>
-               ) : (
-                 <label
-                   htmlFor="reference-image-upload"
-                   className="block border-2 border-dashed border-white/20 rounded-xl p-6 text-center hover:border-primary/50 transition-colors cursor-pointer"
-                 >
-                   <ImageIcon className="w-8 h-8 mx-auto text-muted-foreground mb-2" />
-                   <p className="text-sm text-muted-foreground">
-                     Click to upload a reference image for image-to-image generation
-                   </p>
-                 </label>
-               )}
+              ) : (
+                <div className="space-y-3">
+                  <label
+                    htmlFor="reference-image-upload"
+                    className="block border-2 border-dashed border-white/20 rounded-xl p-6 text-center hover:border-primary/50 transition-colors cursor-pointer"
+                  >
+                    <ImageIcon className="w-8 h-8 mx-auto text-muted-foreground mb-2" />
+                    <p className="text-sm text-muted-foreground hidden md:block">
+                      Click to upload a reference image for image-to-image generation
+                    </p>
+                    <p className="text-sm text-muted-foreground md:hidden">
+                      Tap to upload reference image
+                    </p>
+                  </label>
+                  <Button
+                    type="button"
+                    variant="outline"
+                    className="w-full md:hidden gap-2"
+                    onClick={() => fileInputRef.current?.click()}
+                  >
+                    <Upload className="w-4 h-4" />
+                    Upload Reference Image
+                  </Button>
+                </div>
+              )}
               
               <input
-                 id="reference-image-upload"
+                id="reference-image-upload"
                 ref={fileInputRef}
                 type="file"
                 accept="image/*"

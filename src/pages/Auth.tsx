@@ -5,6 +5,7 @@ import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { supabase } from "@/integrations/supabase/client";
 import { lovable } from "@/integrations/lovable";
+import BackgroundVideo from "@/components/BackgroundVideo";
 import { toast } from "sonner";
 import { z } from "zod";
 
@@ -125,11 +126,8 @@ const Auth = () => {
 
   return (
     <div className="min-h-screen bg-background flex items-center justify-center p-4">
-      {/* Background Effects */}
-      <div className="fixed inset-0 pointer-events-none overflow-hidden">
-        <div className="absolute top-0 left-1/4 w-[500px] h-[500px] bg-glow-primary/20 rounded-full blur-[120px] animate-float" />
-        <div className="absolute bottom-0 right-1/4 w-[400px] h-[400px] bg-glow-accent/20 rounded-full blur-[100px] animate-float" style={{ animationDelay: "-3s" }} />
-      </div>
+      {/* Background Video */}
+      <BackgroundVideo />
 
       <div className="relative z-10 w-full max-w-md">
         {/* Logo */}
