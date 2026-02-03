@@ -55,9 +55,12 @@ const PromptHistory = ({
       {/* Favorites Section */}
       {favorites.length > 0 && (
         <div className="glass-card overflow-hidden">
-          <button
+          <div
+            role="button"
+            tabIndex={0}
             onClick={() => setShowFavorites(!showFavorites)}
-            className="w-full flex items-center justify-between p-4 hover:bg-white/5 transition-colors"
+            onKeyDown={(e) => e.key === 'Enter' && setShowFavorites(!showFavorites)}
+            className="w-full flex items-center justify-between p-4 hover:bg-white/5 transition-colors cursor-pointer"
           >
             <div className="flex items-center gap-2">
               <Star className="w-4 h-4 text-primary fill-primary" />
@@ -71,7 +74,7 @@ const PromptHistory = ({
             ) : (
               <ChevronDown className="w-4 h-4 text-muted-foreground" />
             )}
-          </button>
+          </div>
           {showFavorites && (
             <div className="px-4 pb-4 space-y-2">
               {favorites.map((item) => (
@@ -113,9 +116,12 @@ const PromptHistory = ({
 
       {/* Recent History Section */}
       <div className="glass-card overflow-hidden">
-        <button
+        <div
+          role="button"
+          tabIndex={0}
           onClick={() => setShowHistory(!showHistory)}
-          className="w-full flex items-center justify-between p-4 hover:bg-white/5 transition-colors"
+          onKeyDown={(e) => e.key === 'Enter' && setShowHistory(!showHistory)}
+          className="w-full flex items-center justify-between p-4 hover:bg-white/5 transition-colors cursor-pointer"
         >
           <div className="flex items-center gap-2">
             <Clock className="w-4 h-4 text-muted-foreground" />
@@ -126,17 +132,23 @@ const PromptHistory = ({
           </div>
           <div className="flex items-center gap-2">
             {recentHistory.length > 0 && (
-              <Button
-                size="sm"
-                variant="ghost"
-                className="text-xs text-muted-foreground hover:text-destructive"
+              <span
+                role="button"
+                tabIndex={0}
+                className="text-xs text-muted-foreground hover:text-destructive cursor-pointer px-2 py-1"
                 onClick={(e) => {
                   e.stopPropagation();
                   onClearHistory();
                 }}
+                onKeyDown={(e) => {
+                  if (e.key === 'Enter') {
+                    e.stopPropagation();
+                    onClearHistory();
+                  }
+                }}
               >
                 Clear
-              </Button>
+              </span>
             )}
             {showHistory ? (
               <ChevronUp className="w-4 h-4 text-muted-foreground" />
@@ -144,7 +156,7 @@ const PromptHistory = ({
               <ChevronDown className="w-4 h-4 text-muted-foreground" />
             )}
           </div>
-        </button>
+        </div>
         {showHistory && recentHistory.length > 0 && (
           <div className="px-4 pb-4 space-y-2">
             {recentHistory.map((item) => (
