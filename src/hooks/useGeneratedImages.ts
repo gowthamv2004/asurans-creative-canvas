@@ -1,4 +1,4 @@
-import { useState, useEffect } from "react";
+import { useState, useEffect, useCallback } from "react";
 import { supabase } from "@/integrations/supabase/client";
 import { useAuth } from "./useAuth";
 import { toast } from "sonner";
@@ -12,14 +12,16 @@ export interface GeneratedImage {
   isFavorite: boolean;
   generationType: string;
   parentImageId?: string;
+  userId?: string;
+  userEmail?: string;
 }
 
-export const useGeneratedImages = () => {
+export const useGeneratedImages = (adminViewAll = false) => {
   const { user } = useAuth();
   const [images, setImages] = useState<GeneratedImage[]>([]);
   const [isLoading, setIsLoading] = useState(true);
 
-  const fetchImages = async () => {
+  const fetchImages = useCallback(async () => {
     if (!user) {
       setImages([]);
       setIsLoading(false);
@@ -27,16 +29,22 @@ export const useGeneratedImages = () => {
     }
 
     try {
-      const { data, error } = await supabase
+      let query = supabase
         .from("generated_images")
         .select("*")
-        .eq("user_id", user.id)
         .order("created_at", { ascending: false });
+
+      // If not admin view, filter by user
+      if (!adminViewAll) {
+        query = query.eq("user_id", user.id);
+      }
+
+      const { data, error } = await query;
 
       if (error) throw error;
 
       setImages(
-        data.map((img) => ({
+        (data || []).map((img) => ({
           id: img.id,
           url: img.image_url,
           prompt: img.prompt,
@@ -45,6 +53,7 @@ export const useGeneratedImages = () => {
           isFavorite: img.is_favorite,
           generationType: img.generation_type,
           parentImageId: img.parent_image_id || undefined,
+          userId: img.user_id,
         }))
       );
     } catch (error) {
@@ -52,11 +61,11 @@ export const useGeneratedImages = () => {
     } finally {
       setIsLoading(false);
     }
-  };
+  }, [user, adminViewAll]);
 
   useEffect(() => {
     fetchImages();
-  }, [user]);
+  }, [fetchImages]);
 
   const saveImage = async (
     imageUrl: string,
@@ -95,6 +104,7 @@ export const useGeneratedImages = () => {
         isFavorite: data.is_favorite,
         generationType: data.generation_type,
         parentImageId: data.parent_image_id || undefined,
+        userId: data.user_id,
       };
 
       setImages((prev) => [newImage, ...prev]);
@@ -108,7 +118,6 @@ export const useGeneratedImages = () => {
 
   const toggleFavorite = async (id: string) => {
     if (!user) return;
-
     const image = images.find((img) => img.id === id);
     if (!image) return;
 
@@ -117,7 +126,6 @@ export const useGeneratedImages = () => {
         .from("generated_images")
         .update({ is_favorite: !image.isFavorite })
         .eq("id", id);
-
       if (error) throw error;
 
       setImages((prev) =>
@@ -133,13 +141,11 @@ export const useGeneratedImages = () => {
 
   const deleteImage = async (id: string) => {
     if (!user) return;
-
     try {
       const { error } = await supabase
         .from("generated_images")
         .delete()
         .eq("id", id);
-
       if (error) throw error;
 
       setImages((prev) => prev.filter((img) => img.id !== id));

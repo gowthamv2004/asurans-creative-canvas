@@ -1,4 +1,4 @@
-import { Sparkles, Image, Video, Grid3X3, Zap, LogIn, LogOut, User } from "lucide-react";
+import { Sparkles, Image, Video, Grid3X3, Zap, LogIn, LogOut, User, Shield } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { useAuth } from "@/hooks/useAuth";
 import { useNavigate } from "react-router-dom";
@@ -6,9 +6,10 @@ import { useNavigate } from "react-router-dom";
 interface HeaderProps {
   activeTab: string;
   onTabChange: (tab: string) => void;
+  isAdmin?: boolean;
 }
 
-const Header = ({ activeTab, onTabChange }: HeaderProps) => {
+const Header = ({ activeTab, onTabChange, isAdmin = false }: HeaderProps) => {
   const { user, isAuthenticated, signOut } = useAuth();
   const navigate = useNavigate();
 
@@ -17,6 +18,7 @@ const Header = ({ activeTab, onTabChange }: HeaderProps) => {
     { id: "video", label: "Video", icon: Video },
     { id: "gallery", label: "Gallery", icon: Grid3X3 },
     { id: "enhance", label: "Enhance", icon: Zap },
+    ...(isAdmin ? [{ id: "admin", label: "Admin", icon: Shield }] : []),
   ];
 
   const handleSignOut = async () => {
@@ -65,6 +67,7 @@ const Header = ({ activeTab, onTabChange }: HeaderProps) => {
             {isAuthenticated ? (
               <>
                 <div className="flex items-center gap-2 px-3 py-1.5 rounded-full bg-secondary/50">
+                  {isAdmin && <Shield className="w-4 h-4 text-destructive" />}
                   <User className="w-4 h-4 text-primary" />
                   <span className="text-sm text-muted-foreground">
                     {user?.user_metadata?.display_name || user?.email?.split("@")[0]}
