@@ -10,18 +10,15 @@ export interface PromptHistoryItem {
 }
 
 const STORAGE_KEY = "asuran-prompt-history";
-const MAX_HISTORY_ITEMS = 50;
 
 export const usePromptHistory = () => {
   const [history, setHistory] = useState<PromptHistoryItem[]>([]);
 
-  // Load history from localStorage on mount
   useEffect(() => {
     const stored = localStorage.getItem(STORAGE_KEY);
     if (stored) {
       try {
         const parsed = JSON.parse(stored);
-        // Convert timestamp strings back to Date objects
         const withDates = parsed.map((item: any) => ({
           ...item,
           timestamp: new Date(item.timestamp),
@@ -33,7 +30,6 @@ export const usePromptHistory = () => {
     }
   }, []);
 
-  // Save to localStorage whenever history changes
   useEffect(() => {
     localStorage.setItem(STORAGE_KEY, JSON.stringify(history));
   }, [history]);
@@ -48,11 +44,7 @@ export const usePromptHistory = () => {
       imageUrl,
     };
 
-    setHistory((prev) => {
-      const updated = [newItem, ...prev].slice(0, MAX_HISTORY_ITEMS);
-      return updated;
-    });
-
+    setHistory((prev) => [newItem, ...prev]);
     return newItem;
   };
 

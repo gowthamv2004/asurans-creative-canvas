@@ -10,21 +10,18 @@ import {
 import { downloadImage } from "@/lib/imageUtils";
 import { toast } from "sonner";
 import { useAuth } from "@/hooks/useAuth";
-import { useGeneratedImages, GeneratedImage } from "@/hooks/useGeneratedImages";
+import { GeneratedImage } from "@/hooks/useGeneratedImages";
 
 interface GalleryProps {
   images: GeneratedImage[];
   onEnhance: (image: GeneratedImage) => void;
   onDelete: (id: string) => void;
+  toggleFavorite: (id: string) => void;
 }
 
-const Gallery = ({ images: propImages, onEnhance, onDelete }: GalleryProps) => {
+const Gallery = ({ images, onEnhance, onDelete, toggleFavorite }: GalleryProps) => {
   const [selectedImage, setSelectedImage] = useState<GeneratedImage | null>(null);
   const { isAuthenticated } = useAuth();
-  const { images: dbImages, toggleFavorite, deleteImage } = useGeneratedImages();
-
-  // Use database images if authenticated, otherwise use prop images
-  const images = isAuthenticated ? dbImages : propImages;
 
   const handleDownload = async (image: GeneratedImage) => {
     try {
@@ -32,20 +29,6 @@ const Gallery = ({ images: propImages, onEnhance, onDelete }: GalleryProps) => {
       toast.success("Image downloaded!");
     } catch {
       toast.error("Failed to download image");
-    }
-  };
-
-  const handleToggleFavorite = async (id: string) => {
-    if (isAuthenticated) {
-      await toggleFavorite(id);
-    }
-  };
-
-  const handleDelete = async (id: string) => {
-    if (isAuthenticated) {
-      await deleteImage(id);
-    } else {
-      onDelete(id);
     }
   };
 
@@ -57,8 +40,7 @@ const Gallery = ({ images: propImages, onEnhance, onDelete }: GalleryProps) => {
         </div>
         <h3 className="font-display text-2xl font-semibold">No images yet</h3>
         <p className="text-muted-foreground max-w-md mx-auto">
-          Start generating images and they'll appear here. Build your collection
-          of AI-created masterpieces!
+          Start generating images and they'll appear here.
         </p>
         {!isAuthenticated && (
           <p className="text-sm text-muted-foreground">
@@ -71,7 +53,6 @@ const Gallery = ({ images: propImages, onEnhance, onDelete }: GalleryProps) => {
 
   return (
     <div className="space-y-8">
-      {/* Header */}
       <div className="flex items-center justify-between">
         <div>
           <h2 className="font-display text-3xl font-bold">Your Gallery</h2>
@@ -81,79 +62,38 @@ const Gallery = ({ images: propImages, onEnhance, onDelete }: GalleryProps) => {
         </div>
       </div>
 
-      {/* Gallery Grid */}
       <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-4">
         {images.map((image) => (
-          <div
-            key={image.id}
-            className="image-card aspect-square animate-fade-in group relative overflow-hidden rounded-xl"
-          >
-            <img
-              src={image.url}
-              alt={image.prompt}
-              className="w-full h-full object-cover"
-            />
-            
-            {/* Favorite Badge */}
+          <div key={image.id} className="image-card aspect-square animate-fade-in group relative overflow-hidden rounded-xl">
+            <img src={image.url} alt={image.prompt} className="w-full h-full object-cover" />
             {image.isFavorite && (
               <div className="absolute top-2 right-2 z-10">
                 <Star className="w-5 h-5 fill-primary text-primary" />
               </div>
             )}
-
-            {/* Generation Type Badge */}
             {image.generationType && image.generationType !== "text-to-image" && (
               <div className="absolute top-2 left-2 z-10 px-2 py-1 rounded-full bg-black/50 backdrop-blur-sm text-xs text-white">
                 {image.generationType}
               </div>
             )}
-            
-            {/* Overlay */}
             <div className="absolute inset-0 bg-gradient-to-t from-black/80 via-transparent to-transparent opacity-0 group-hover:opacity-100 transition-all duration-300 flex flex-col justify-end p-4 z-10">
-              <p className="text-sm text-white/90 line-clamp-2 mb-2">
-                {image.prompt}
-              </p>
+              <p className="text-sm text-white/90 line-clamp-2 mb-2">{image.prompt}</p>
               <div className="flex items-center justify-between">
                 <span className="text-xs text-white/60">{image.style}</span>
                 <div className="flex gap-1">
-                  <Button
-                    size="icon"
-                    variant="ghost"
-                    className="h-8 w-8 hover:bg-white/20"
-                    onClick={() => setSelectedImage(image)}
-                  >
+                  <Button size="icon" variant="ghost" className="h-8 w-8 hover:bg-white/20" onClick={() => setSelectedImage(image)}>
                     <Maximize2 className="w-4 h-4 text-white" />
                   </Button>
-                  <Button
-                    size="icon"
-                    variant="ghost"
-                    className="h-8 w-8 hover:bg-white/20"
-                    onClick={() => handleDownload(image)}
-                  >
+                  <Button size="icon" variant="ghost" className="h-8 w-8 hover:bg-white/20" onClick={() => handleDownload(image)}>
                     <Download className="w-4 h-4 text-white" />
                   </Button>
-                  <Button
-                    size="icon"
-                    variant="ghost"
-                    className="h-8 w-8 hover:bg-white/20"
-                    onClick={() => handleToggleFavorite(image.id)}
-                  >
+                  <Button size="icon" variant="ghost" className="h-8 w-8 hover:bg-white/20" onClick={() => toggleFavorite(image.id)}>
                     <Star className={`w-4 h-4 ${image.isFavorite ? "fill-primary text-primary" : "text-white"}`} />
                   </Button>
-                  <Button
-                    size="icon"
-                    variant="ghost"
-                    className="h-8 w-8 hover:bg-white/20"
-                    onClick={() => onEnhance(image)}
-                  >
+                  <Button size="icon" variant="ghost" className="h-8 w-8 hover:bg-white/20" onClick={() => onEnhance(image)}>
                     <Zap className="w-4 h-4 text-white" />
                   </Button>
-                  <Button
-                    size="icon"
-                    variant="ghost"
-                    className="h-8 w-8 hover:bg-destructive/50"
-                    onClick={() => handleDelete(image.id)}
-                  >
+                  <Button size="icon" variant="ghost" className="h-8 w-8 hover:bg-destructive/50" onClick={() => onDelete(image.id)}>
                     <Trash2 className="w-4 h-4 text-white" />
                   </Button>
                 </div>
@@ -163,7 +103,6 @@ const Gallery = ({ images: propImages, onEnhance, onDelete }: GalleryProps) => {
         ))}
       </div>
 
-      {/* Fullscreen Dialog */}
       <Dialog open={!!selectedImage} onOpenChange={() => setSelectedImage(null)}>
         <DialogContent className="max-w-5xl p-0 bg-transparent border-0">
           <DialogHeader className="sr-only">
@@ -171,45 +110,20 @@ const Gallery = ({ images: propImages, onEnhance, onDelete }: GalleryProps) => {
           </DialogHeader>
           {selectedImage && (
             <div className="relative">
-              <Button
-                size="icon"
-                variant="ghost"
-                className="absolute top-4 right-4 z-20 bg-black/50 hover:bg-black/70"
-                onClick={() => setSelectedImage(null)}
-              >
+              <Button size="icon" variant="ghost" className="absolute top-4 right-4 z-20 bg-black/50 hover:bg-black/70" onClick={() => setSelectedImage(null)}>
                 <X className="w-5 h-5" />
               </Button>
-              <img
-                src={selectedImage.url}
-                alt={selectedImage.prompt}
-                className="w-full h-auto max-h-[90vh] object-contain rounded-xl"
-              />
+              <img src={selectedImage.url} alt={selectedImage.prompt} className="w-full h-auto max-h-[90vh] object-contain rounded-xl" />
               <div className="absolute bottom-0 left-0 right-0 p-6 bg-gradient-to-t from-black/80 to-transparent rounded-b-xl">
-                <p className="text-white font-medium mb-2">
-                  {selectedImage.prompt}
-                </p>
+                <p className="text-white font-medium mb-2">{selectedImage.prompt}</p>
                 <div className="flex items-center justify-between">
-                  <span className="text-white/60 text-sm">
-                    {selectedImage.style}
-                  </span>
+                  <span className="text-white/60 text-sm">{selectedImage.style}</span>
                   <div className="flex gap-2">
-                    <Button
-                      size="sm"
-                      variant="secondary"
-                      className="gap-2"
-                      onClick={() => handleDownload(selectedImage)}
-                    >
+                    <Button size="sm" variant="secondary" className="gap-2" onClick={() => handleDownload(selectedImage)}>
                       <Download className="w-4 h-4" />
                       Download
                     </Button>
-                    <Button
-                      size="sm"
-                      className="gap-2 btn-gradient"
-                      onClick={() => {
-                        onEnhance(selectedImage);
-                        setSelectedImage(null);
-                      }}
-                    >
+                    <Button size="sm" className="gap-2 btn-gradient" onClick={() => { onEnhance(selectedImage); setSelectedImage(null); }}>
                       <Zap className="w-4 h-4" />
                       Enhance
                     </Button>

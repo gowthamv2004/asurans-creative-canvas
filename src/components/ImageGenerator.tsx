@@ -1,5 +1,5 @@
 import { useState, useRef } from "react";
-import { Sparkles, Wand2, Loader2, Download, Star, Upload, Image as ImageIcon, X } from "lucide-react";
+import { Sparkles, Wand2, Loader2, Download, Upload, Image as ImageIcon, X } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Textarea } from "@/components/ui/textarea";
 import StylePresets, { StylePreset, presets } from "./StylePresets";
@@ -9,13 +9,20 @@ import { downloadImage } from "@/lib/imageUtils";
 import { supabase } from "@/integrations/supabase/client";
 import { toast } from "sonner";
 import { useAuth } from "@/hooks/useAuth";
-import { useGeneratedImages, GeneratedImage } from "@/hooks/useGeneratedImages";
+import { GeneratedImage } from "@/hooks/useGeneratedImages";
 
 interface ImageGeneratorProps {
-  onImageGenerated: (image: GeneratedImage) => void;
+  onImageGenerated: () => void;
+  saveImage: (
+    imageUrl: string,
+    prompt: string,
+    style: string,
+    generationType?: string,
+    parentImageId?: string
+  ) => Promise<GeneratedImage | null>;
 }
 
-const ImageGenerator = ({ onImageGenerated }: ImageGeneratorProps) => {
+const ImageGenerator = ({ onImageGenerated, saveImage }: ImageGeneratorProps) => {
   const [prompt, setPrompt] = useState("");
   const [selectedPreset, setSelectedPreset] = useState<StylePreset>(presets[0]);
   const [isGenerating, setIsGenerating] = useState(false);
@@ -24,7 +31,6 @@ const ImageGenerator = ({ onImageGenerated }: ImageGeneratorProps) => {
   const fileInputRef = useRef<HTMLInputElement>(null);
 
   const { isAuthenticated } = useAuth();
-  const { saveImage, toggleFavorite } = useGeneratedImages();
 
   const {
     history,
@@ -42,7 +48,6 @@ const ImageGenerator = ({ onImageGenerated }: ImageGeneratorProps) => {
         toast.error("Please upload an image file");
         return;
       }
-      
       const reader = new FileReader();
       reader.onload = (event) => {
         setReferenceImage(event.target?.result as string);
@@ -53,9 +58,7 @@ const ImageGenerator = ({ onImageGenerated }: ImageGeneratorProps) => {
 
   const clearReferenceImage = () => {
     setReferenceImage(null);
-    if (fileInputRef.current) {
-      fileInputRef.current.value = "";
-    }
+    if (fileInputRef.current) fileInputRef.current.value = "";
   };
 
   const handleGenerate = async () => {
@@ -68,9 +71,8 @@ const ImageGenerator = ({ onImageGenerated }: ImageGeneratorProps) => {
 
     try {
       let result;
-      
+
       if (referenceImage) {
-        // Image-to-image generation
         const { data, error } = await supabase.functions.invoke("edit-image", {
           body: {
             prompt: `${prompt}. Style: ${selectedPreset.prompt}`,
@@ -78,31 +80,22 @@ const ImageGenerator = ({ onImageGenerated }: ImageGeneratorProps) => {
             editType: "reference",
           },
         });
-
         if (error) throw new Error(error.message || "Failed to generate image");
         if (data?.error) throw new Error(data.error);
         if (!data?.imageUrl) throw new Error("No image received from AI");
-        
         result = data;
       } else {
-        // Text-to-image generation
         const { data, error } = await supabase.functions.invoke("generate-image", {
-          body: {
-            prompt: prompt,
-            style: selectedPreset.prompt,
-          },
+          body: { prompt, style: selectedPreset.prompt },
         });
-
         if (error) throw new Error(error.message || "Failed to generate image");
         if (data?.error) throw new Error(data.error);
         if (!data?.imageUrl) throw new Error("No image received from AI");
-        
         result = data;
       }
 
       const generationType = referenceImage ? "image-to-image" : "text-to-image";
-      
-      // Save to database if authenticated
+
       if (isAuthenticated) {
         const savedImage = await saveImage(
           result.imageUrl,
@@ -110,24 +103,21 @@ const ImageGenerator = ({ onImageGenerated }: ImageGeneratorProps) => {
           selectedPreset.name,
           generationType
         );
-        
         if (savedImage) {
           setGeneratedImage(savedImage);
-          onImageGenerated(savedImage);
+          onImageGenerated();
         }
       } else {
-        // For unauthenticated users, just display the image
         const newImage: GeneratedImage = {
           id: Date.now().toString(),
           url: result.imageUrl,
-          prompt: prompt,
+          prompt,
           style: selectedPreset.name,
           timestamp: new Date(),
           isFavorite: false,
           generationType,
         };
         setGeneratedImage(newImage);
-        onImageGenerated(newImage);
       }
 
       addToHistory(prompt, selectedPreset.name, result.imageUrl);
@@ -143,7 +133,6 @@ const ImageGenerator = ({ onImageGenerated }: ImageGeneratorProps) => {
 
   const handleDownload = async () => {
     if (!generatedImage) return;
-
     try {
       await downloadImage(generatedImage.url, `asuran-${generatedImage.style.toLowerCase()}`);
       toast.success("Image downloaded!");
@@ -155,29 +144,7 @@ const ImageGenerator = ({ onImageGenerated }: ImageGeneratorProps) => {
   const handleSelectFromHistory = (historyPrompt: string, style: string) => {
     setPrompt(historyPrompt);
     const preset = presets.find((p) => p.name === style);
-    if (preset) {
-      setSelectedPreset(preset);
-    }
-  };
-
-  const handleToggleFavorite = async () => {
-    if (!generatedImage) return;
-    
-    if (isAuthenticated) {
-      await toggleFavorite(generatedImage.id);
-      setGeneratedImage((prev) =>
-        prev ? { ...prev, isFavorite: !prev.isFavorite } : null
-      );
-    } else {
-      const historyItem = history.find((h) => h.prompt === generatedImage.prompt);
-      if (historyItem) {
-        toggleHistoryFavorite(historyItem.id);
-      }
-    }
-    
-    toast.success(
-      generatedImage.isFavorite ? "Removed from favorites" : "Added to favorites"
-    );
+    if (preset) setSelectedPreset(preset);
   };
 
   return (
@@ -199,9 +166,7 @@ const ImageGenerator = ({ onImageGenerated }: ImageGeneratorProps) => {
       </div>
 
       <div className="grid lg:grid-cols-[1fr_320px] gap-6 max-w-6xl mx-auto">
-        {/* Main Generator */}
         <div className="space-y-6">
-          {/* Generator Card */}
           <div className="glass-card p-6 md:p-8 space-y-6 glow-border">
             {/* Reference Image Upload */}
             <div className="space-y-2">
@@ -209,84 +174,43 @@ const ImageGenerator = ({ onImageGenerated }: ImageGeneratorProps) => {
                 <Upload className="w-4 h-4" />
                 Reference Image (Optional)
               </label>
-              
               {referenceImage ? (
                 <div className="relative inline-block">
-                  <img
-                    src={referenceImage}
-                    alt="Reference"
-                    className="w-32 h-32 object-cover rounded-xl border border-white/10"
-                  />
-                  <button
-                    onClick={clearReferenceImage}
-                    className="absolute -top-2 -right-2 w-6 h-6 rounded-full bg-destructive text-destructive-foreground flex items-center justify-center"
-                  >
+                  <img src={referenceImage} alt="Reference" className="w-32 h-32 object-cover rounded-xl border border-white/10" />
+                  <button onClick={clearReferenceImage} className="absolute -top-2 -right-2 w-6 h-6 rounded-full bg-destructive text-destructive-foreground flex items-center justify-center">
                     <X className="w-4 h-4" />
                   </button>
                 </div>
               ) : (
                 <div className="space-y-3">
-                  <label
-                    htmlFor="reference-image-upload"
-                    className="block border-2 border-dashed border-white/20 rounded-xl p-6 text-center hover:border-primary/50 transition-colors cursor-pointer"
-                  >
+                  <label htmlFor="reference-image-upload" className="block border-2 border-dashed border-white/20 rounded-xl p-6 text-center hover:border-primary/50 transition-colors cursor-pointer">
                     <ImageIcon className="w-8 h-8 mx-auto text-muted-foreground mb-2" />
-                    <p className="text-sm text-muted-foreground hidden md:block">
-                      Click to upload a reference image for image-to-image generation
-                    </p>
-                    <p className="text-sm text-muted-foreground md:hidden">
-                      Tap to upload reference image
-                    </p>
+                    <p className="text-sm text-muted-foreground hidden md:block">Click to upload a reference image for image-to-image generation</p>
+                    <p className="text-sm text-muted-foreground md:hidden">Tap to upload reference image</p>
                   </label>
-                  <Button
-                    type="button"
-                    variant="outline"
-                    className="w-full md:hidden gap-2"
-                    onClick={() => fileInputRef.current?.click()}
-                  >
+                  <Button type="button" variant="outline" className="w-full md:hidden gap-2" onClick={() => fileInputRef.current?.click()}>
                     <Upload className="w-4 h-4" />
                     Upload Reference Image
                   </Button>
                 </div>
               )}
-              
-              <input
-                id="reference-image-upload"
-                ref={fileInputRef}
-                type="file"
-                accept="image/*"
-                onChange={handleFileUpload}
-                className="hidden"
-              />
+              <input id="reference-image-upload" ref={fileInputRef} type="file" accept="image/*" onChange={handleFileUpload} className="hidden" />
             </div>
 
             {/* Prompt Input */}
             <div className="space-y-2">
               <label className="text-sm font-medium">Your Prompt</label>
               <Textarea
-                placeholder={
-                  referenceImage
-                    ? "Describe how to transform this image... (e.g., 'Make it look like a watercolor painting')"
-                    : "Describe the image you want to create... (e.g., 'A majestic dragon flying over a mountain range at sunset')"
-                }
+                placeholder={referenceImage ? "Describe how to transform this image..." : "Describe the image you want to create..."}
                 value={prompt}
                 onChange={(e) => setPrompt(e.target.value)}
                 className="min-h-[120px] bg-secondary/50 border-white/10 focus:border-primary resize-none"
               />
             </div>
 
-            {/* Style Presets */}
-            <StylePresets
-              selectedPreset={selectedPreset.id}
-              onSelectPreset={setSelectedPreset}
-            />
+            <StylePresets selectedPreset={selectedPreset.id} onSelectPreset={setSelectedPreset} />
 
-            {/* Generate Button */}
-            <Button
-              onClick={handleGenerate}
-              disabled={isGenerating || !prompt.trim()}
-              className="w-full h-14 text-lg font-semibold btn-gradient"
-            >
+            <Button onClick={handleGenerate} disabled={isGenerating || !prompt.trim()} className="w-full h-14 text-lg font-semibold btn-gradient">
               {isGenerating ? (
                 <>
                   <Loader2 className="w-5 h-5 mr-2 animate-spin" />
@@ -314,39 +238,15 @@ const ImageGenerator = ({ onImageGenerated }: ImageGeneratorProps) => {
                 <div className="flex items-center justify-between">
                   <h3 className="font-display text-lg font-semibold">Generated Result</h3>
                   <div className="flex items-center gap-2">
-                    <Button
-                      variant="outline"
-                      size="sm"
-                      className="gap-2"
-                      onClick={handleToggleFavorite}
-                    >
-                      <Star
-                        className={`w-4 h-4 ${
-                          generatedImage.isFavorite ? "fill-primary text-primary" : ""
-                        }`}
-                      />
-                      Favorite
-                    </Button>
-                    <Button
-                      variant="outline"
-                      size="sm"
-                      className="gap-2"
-                      onClick={handleDownload}
-                    >
+                    <Button variant="outline" size="sm" className="gap-2" onClick={handleDownload}>
                       <Download className="w-4 h-4" />
                       Download
                     </Button>
                   </div>
                 </div>
-
                 <div className="image-card aspect-square md:aspect-video overflow-hidden rounded-xl group">
-                  <img
-                    src={generatedImage.url}
-                    alt={generatedImage.prompt}
-                    className="w-full h-full object-cover transition-transform duration-500 group-hover:scale-105"
-                  />
+                  <img src={generatedImage.url} alt={generatedImage.prompt} className="w-full h-full object-cover transition-transform duration-500 group-hover:scale-105" />
                 </div>
-
                 <div className="flex items-center justify-between text-sm text-muted-foreground">
                   <span>Style: {generatedImage.style}</span>
                   <span>{generatedImage.timestamp.toLocaleTimeString()}</span>
@@ -356,7 +256,7 @@ const ImageGenerator = ({ onImageGenerated }: ImageGeneratorProps) => {
           )}
         </div>
 
-        {/* Sidebar - History & Favorites */}
+        {/* Sidebar - History */}
         <div className="space-y-4">
           <h3 className="font-display text-lg font-semibold">Prompt History</h3>
           <PromptHistory

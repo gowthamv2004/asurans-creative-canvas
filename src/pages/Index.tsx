@@ -4,59 +4,60 @@ import ImageGenerator from "@/components/ImageGenerator";
 import VideoGenerator from "@/components/VideoGenerator";
 import Gallery from "@/components/Gallery";
 import EnhancePanel from "@/components/EnhancePanel";
+import AdminPanel from "@/components/AdminPanel";
 import BackgroundVideo from "@/components/BackgroundVideo";
-import { toast } from "sonner";
-import { GeneratedImage } from "@/hooks/useGeneratedImages";
+
+import { useGeneratedImages, GeneratedImage } from "@/hooks/useGeneratedImages";
+import { useUserRole } from "@/hooks/useUserRole";
 
 const Index = () => {
   const [activeTab, setActiveTab] = useState("generate");
-  const [galleryImages, setGalleryImages] = useState<GeneratedImage[]>([]);
   const [selectedEnhanceImage, setSelectedEnhanceImage] = useState<GeneratedImage | null>(null);
-
-  const handleImageGenerated = (image: GeneratedImage) => {
-    setGalleryImages((prev) => [image, ...prev]);
-  };
-
-  const handleDeleteImage = (id: string) => {
-    setGalleryImages((prev) => prev.filter((img) => img.id !== id));
-    toast.success("Image deleted");
-  };
+  const { isAdmin } = useUserRole();
+  const { images, saveImage, toggleFavorite, deleteImage, refetch } = useGeneratedImages();
 
   const handleEnhanceImage = (image: GeneratedImage) => {
     setSelectedEnhanceImage(image);
     setActiveTab("enhance");
   };
 
+  const handleDeleteImage = (id: string) => {
+    deleteImage(id);
+  };
+
   return (
     <div className="min-h-screen bg-background">
-      {/* Background Video */}
       <BackgroundVideo />
-
-      <Header activeTab={activeTab} onTabChange={setActiveTab} />
+      <Header activeTab={activeTab} onTabChange={setActiveTab} isAdmin={isAdmin} />
 
       <main className="relative z-10 pt-28 pb-16 px-4">
         <div className="container mx-auto">
           {activeTab === "generate" && (
-            <ImageGenerator onImageGenerated={handleImageGenerated} />
+            <ImageGenerator
+              onImageGenerated={() => refetch()}
+              saveImage={saveImage}
+            />
           )}
           {activeTab === "video" && <VideoGenerator />}
           {activeTab === "gallery" && (
             <Gallery
-              images={galleryImages}
+              images={images}
               onEnhance={handleEnhanceImage}
               onDelete={handleDeleteImage}
+              toggleFavorite={toggleFavorite}
             />
           )}
           {activeTab === "enhance" && (
             <EnhancePanel
               selectedImage={selectedEnhanceImage}
               onImageSelect={setSelectedEnhanceImage}
+              saveImage={saveImage}
             />
           )}
+          {activeTab === "admin" && isAdmin && <AdminPanel />}
         </div>
       </main>
 
-      {/* Footer */}
       <footer className="relative z-10 border-t border-white/5 py-8">
         <div className="container mx-auto px-4 text-center text-sm text-muted-foreground">
           <p>
