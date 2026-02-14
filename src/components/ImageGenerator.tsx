@@ -1,9 +1,10 @@
-import { useState, useRef } from "react";
-import { Sparkles, Wand2, Loader2, Download, Upload, Image as ImageIcon, X } from "lucide-react";
+import { useState } from "react";
+import { Sparkles, Wand2, Loader2, Download } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Textarea } from "@/components/ui/textarea";
 import StylePresets, { StylePreset, presets } from "./StylePresets";
 import PromptHistory from "./PromptHistory";
+import ReferenceImagePicker from "./ReferenceImagePicker";
 import { usePromptHistory } from "@/hooks/usePromptHistory";
 import { downloadImage } from "@/lib/imageUtils";
 import { supabase } from "@/integrations/supabase/client";
@@ -20,15 +21,15 @@ interface ImageGeneratorProps {
     generationType?: string,
     parentImageId?: string
   ) => Promise<GeneratedImage | null>;
+  galleryImages?: GeneratedImage[];
 }
 
-const ImageGenerator = ({ onImageGenerated, saveImage }: ImageGeneratorProps) => {
+const ImageGenerator = ({ onImageGenerated, saveImage, galleryImages = [] }: ImageGeneratorProps) => {
   const [prompt, setPrompt] = useState("");
   const [selectedPreset, setSelectedPreset] = useState<StylePreset>(presets[0]);
   const [isGenerating, setIsGenerating] = useState(false);
   const [generatedImage, setGeneratedImage] = useState<GeneratedImage | null>(null);
-  const [referenceImage, setReferenceImage] = useState<string | null>(null);
-  const fileInputRef = useRef<HTMLInputElement>(null);
+  const [referenceImages, setReferenceImages] = useState<string[]>([]);
 
   const { isAuthenticated } = useAuth();
 
@@ -41,24 +42,8 @@ const ImageGenerator = ({ onImageGenerated, saveImage }: ImageGeneratorProps) =>
     clearHistory,
   } = usePromptHistory();
 
-  const handleFileUpload = (e: React.ChangeEvent<HTMLInputElement>) => {
-    const file = e.target.files?.[0];
-    if (file) {
-      if (!file.type.startsWith("image/")) {
-        toast.error("Please upload an image file");
-        return;
-      }
-      const reader = new FileReader();
-      reader.onload = (event) => {
-        setReferenceImage(event.target?.result as string);
-      };
-      reader.readAsDataURL(file);
-    }
-  };
-
-  const clearReferenceImage = () => {
-    setReferenceImage(null);
-    if (fileInputRef.current) fileInputRef.current.value = "";
+  const clearReferenceImages = () => {
+    setReferenceImages([]);
   };
 
   const handleGenerate = async () => {
@@ -71,12 +56,14 @@ const ImageGenerator = ({ onImageGenerated, saveImage }: ImageGeneratorProps) =>
 
     try {
       let result;
+      const hasReferences = referenceImages.length > 0;
 
-      if (referenceImage) {
+      if (hasReferences) {
         const { data, error } = await supabase.functions.invoke("edit-image", {
           body: {
             prompt: `${prompt}. Style: ${selectedPreset.prompt}`,
-            imageUrl: referenceImage,
+            imageUrl: referenceImages[0],
+            additionalImages: referenceImages.slice(1),
             editType: "reference",
           },
         });
@@ -94,7 +81,7 @@ const ImageGenerator = ({ onImageGenerated, saveImage }: ImageGeneratorProps) =>
         result = data;
       }
 
-      const generationType = referenceImage ? "image-to-image" : "text-to-image";
+      const generationType = hasReferences ? "image-to-image" : "text-to-image";
 
       if (isAuthenticated) {
         const savedImage = await saveImage(
@@ -122,7 +109,7 @@ const ImageGenerator = ({ onImageGenerated, saveImage }: ImageGeneratorProps) =>
 
       addToHistory(prompt, selectedPreset.name, result.imageUrl);
       toast.success("Image generated successfully!");
-      clearReferenceImage();
+      clearReferenceImages();
     } catch (error) {
       console.error("Generation error:", error);
       toast.error(error instanceof Error ? error.message : "Failed to generate image");
@@ -167,41 +154,19 @@ const ImageGenerator = ({ onImageGenerated, saveImage }: ImageGeneratorProps) =>
 
       <div className="grid lg:grid-cols-[1fr_320px] gap-6 max-w-6xl mx-auto">
         <div className="space-y-6">
-          <div className="glass-card p-6 md:p-8 space-y-6 glow-border">
-            {/* Reference Image Upload */}
-            <div className="space-y-2">
-              <label className="text-sm font-medium flex items-center gap-2">
-                <Upload className="w-4 h-4" />
-                Reference Image (Optional)
-              </label>
-              {referenceImage ? (
-                <div className="relative inline-block">
-                  <img src={referenceImage} alt="Reference" className="w-32 h-32 object-cover rounded-xl border border-white/10" />
-                  <button onClick={clearReferenceImage} className="absolute -top-2 -right-2 w-6 h-6 rounded-full bg-destructive text-destructive-foreground flex items-center justify-center">
-                    <X className="w-4 h-4" />
-                  </button>
-                </div>
-              ) : (
-                <div className="space-y-3">
-                  <label htmlFor="reference-image-upload" className="block border-2 border-dashed border-white/20 rounded-xl p-6 text-center hover:border-primary/50 transition-colors cursor-pointer">
-                    <ImageIcon className="w-8 h-8 mx-auto text-muted-foreground mb-2" />
-                    <p className="text-sm text-muted-foreground hidden md:block">Click to upload a reference image for image-to-image generation</p>
-                    <p className="text-sm text-muted-foreground md:hidden">Tap to upload reference image</p>
-                  </label>
-                  <Button type="button" variant="outline" className="w-full md:hidden gap-2" onClick={() => fileInputRef.current?.click()}>
-                    <Upload className="w-4 h-4" />
-                    Upload Reference Image
-                  </Button>
-                </div>
-              )}
-              <input id="reference-image-upload" ref={fileInputRef} type="file" accept="image/*" onChange={handleFileUpload} className="hidden" />
-            </div>
+           <div className="glass-card p-6 md:p-8 space-y-6 glow-border">
+            {/* Reference Image Picker */}
+            <ReferenceImagePicker
+              referenceImages={referenceImages}
+              onImagesChange={setReferenceImages}
+              galleryImages={galleryImages}
+            />
 
             {/* Prompt Input */}
             <div className="space-y-2">
               <label className="text-sm font-medium">Your Prompt</label>
               <Textarea
-                placeholder={referenceImage ? "Describe how to transform this image..." : "Describe the image you want to create..."}
+                placeholder={referenceImages.length > 0 ? "Describe how to transform these images..." : "Describe the image you want to create..."}
                 value={prompt}
                 onChange={(e) => setPrompt(e.target.value)}
                 className="min-h-[120px] bg-secondary/50 border-white/10 focus:border-primary resize-none"
@@ -214,12 +179,12 @@ const ImageGenerator = ({ onImageGenerated, saveImage }: ImageGeneratorProps) =>
               {isGenerating ? (
                 <>
                   <Loader2 className="w-5 h-5 mr-2 animate-spin" />
-                  {referenceImage ? "Transforming..." : "Generating with AI..."}
+                  {referenceImages.length > 0 ? "Transforming..." : "Generating with AI..."}
                 </>
               ) : (
                 <>
                   <Wand2 className="w-5 h-5 mr-2" />
-                  {referenceImage ? "Transform Image" : "Generate Image"}
+                  {referenceImages.length > 0 ? "Transform Image" : "Generate Image"}
                 </>
               )}
             </Button>

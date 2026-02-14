@@ -11,7 +11,7 @@ serve(async (req) => {
   }
 
   try {
-    const { prompt, imageUrl, editType } = await req.json();
+    const { prompt, imageUrl, additionalImages, editType } = await req.json();
 
     if (!prompt) {
       return new Response(
@@ -28,30 +28,25 @@ serve(async (req) => {
     let messages;
     
     if (imageUrl) {
-      // Image-to-image or editing mode
       const editPrompt = editType === "vary" 
         ? `Create a variation of this image: ${prompt}. Keep the same style and composition but add creative differences.`
         : editType === "edit"
         ? `Edit this image: ${prompt}`
-        : `Use this image as reference and create: ${prompt}`;
+        : `Use these reference images and create: ${prompt}`;
 
-      messages = [
-        {
-          role: "user",
-          content: [
-            {
-              type: "text",
-              text: editPrompt,
-            },
-            {
-              type: "image_url",
-              image_url: {
-                url: imageUrl,
-              },
-            },
-          ],
-        },
+      const contentParts: unknown[] = [
+        { type: "text", text: editPrompt },
+        { type: "image_url", image_url: { url: imageUrl } },
       ];
+
+      // Add additional reference images if provided
+      if (additionalImages && Array.isArray(additionalImages)) {
+        for (const img of additionalImages) {
+          contentParts.push({ type: "image_url", image_url: { url: img } });
+        }
+      }
+
+      messages = [{ role: "user", content: contentParts }];
     } else {
       return new Response(
         JSON.stringify({ error: "Image URL is required for editing" }),
