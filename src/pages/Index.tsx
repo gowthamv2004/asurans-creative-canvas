@@ -36,6 +36,7 @@ const Index = () => {
             <ImageGenerator
               onImageGenerated={() => refetch()}
               saveImage={saveImage}
+              galleryImages={images}
             />
           )}
           {activeTab === "video" && <VideoGenerator />}
