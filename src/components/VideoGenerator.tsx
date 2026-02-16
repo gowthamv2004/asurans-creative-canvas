@@ -1,24 +1,89 @@
-import { useState } from "react";
-import { Video, Clock, AlertCircle, Mail, CheckCircle2 } from "lucide-react";
+import { useState, useRef } from "react";
+import { Video, Clock, Loader2, Download, Wand2, Sparkles, ImageIcon } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Textarea } from "@/components/ui/textarea";
-import { Input } from "@/components/ui/input";
 import { Slider } from "@/components/ui/slider";
+import { Progress } from "@/components/ui/progress";
 import { toast } from "sonner";
+import { supabase } from "@/integrations/supabase/client";
 
 const VideoGenerator = () => {
   const [prompt, setPrompt] = useState("");
   const [duration, setDuration] = useState([5]);
-  const [waitlistEmail, setWaitlistEmail] = useState("");
-  const [isJoined, setIsJoined] = useState(false);
+  const [isGenerating, setIsGenerating] = useState(false);
+  const [progress, setProgress] = useState(0);
+  const [generatedVideoUrl, setGeneratedVideoUrl] = useState<string | null>(null);
+  const [referenceImage, setReferenceImage] = useState<string | null>(null);
+  const fileInputRef = useRef<HTMLInputElement>(null);
 
-  const handleJoinWaitlist = () => {
-    if (!waitlistEmail.trim() || !waitlistEmail.includes("@")) {
-      toast.error("Please enter a valid email");
+  const handleImageUpload = (e: React.ChangeEvent<HTMLInputElement>) => {
+    const file = e.target.files?.[0];
+    if (!file) return;
+    const reader = new FileReader();
+    reader.onload = (ev) => {
+      setReferenceImage(ev.target?.result as string);
+    };
+    reader.readAsDataURL(file);
+  };
+
+  const handleGenerate = async () => {
+    if (!prompt.trim()) {
+      toast.error("Please enter a video description");
       return;
     }
-    setIsJoined(true);
-    toast.success("You've been added to the waitlist! We'll notify you when video generation is available.");
+
+    setIsGenerating(true);
+    setProgress(0);
+    setGeneratedVideoUrl(null);
+
+    // Simulate progress while waiting
+    const progressInterval = setInterval(() => {
+      setProgress((prev) => Math.min(prev + 1, 90));
+    }, 3000);
+
+    try {
+      const { data, error } = await supabase.functions.invoke("generate-video", {
+        body: {
+          prompt,
+          duration: duration[0],
+          imageUrl: referenceImage,
+        },
+      });
+
+      clearInterval(progressInterval);
+
+      if (error) throw new Error(error.message || "Failed to generate video");
+      if (data?.error) throw new Error(data.error);
+      if (!data?.videoUrl) throw new Error("No video received");
+
+      setProgress(100);
+      setGeneratedVideoUrl(data.videoUrl);
+      toast.success("Video generated successfully!");
+    } catch (error) {
+      clearInterval(progressInterval);
+      console.error("Video generation error:", error);
+      toast.error(error instanceof Error ? error.message : "Failed to generate video");
+    } finally {
+      setIsGenerating(false);
+      setProgress(0);
+    }
+  };
+
+  const handleDownload = async () => {
+    if (!generatedVideoUrl) return;
+    try {
+      const res = await fetch(generatedVideoUrl);
+      const blob = await res.blob();
+      const url = URL.createObjectURL(blob);
+      const a = document.createElement("a");
+      a.href = url;
+      a.download = `asuran-video-${Date.now()}.mp4`;
+      a.click();
+      URL.revokeObjectURL(url);
+      toast.success("Video downloaded!");
+    } catch {
+      toast.error("Failed to download video");
+    }
   };
 
   return (
@@ -33,97 +98,161 @@ const VideoGenerator = () => {
           Bring your ideas to <span className="gradient-text">motion</span>
         </h2>
         <p className="text-muted-foreground max-w-2xl mx-auto">
-          AI-powered video generation is coming soon. Be the first to know when it launches!
+          Generate stunning AI videos from text descriptions or reference images using Runway ML.
         </p>
       </div>
 
-      {/* Coming Soon Banner */}
-      <div className="max-w-4xl mx-auto">
-        <div className="glass-card p-8 glow-border text-center space-y-6">
-          <div className="w-20 h-20 mx-auto rounded-full bg-accent/10 flex items-center justify-center">
-            <Video className="w-10 h-10 text-accent" />
-          </div>
-          
+      <div className="max-w-4xl mx-auto space-y-6">
+        <div className="glass-card p-6 md:p-8 space-y-6 glow-border">
+          {/* Reference Image (optional) */}
           <div className="space-y-2">
-            <h3 className="font-display text-2xl font-bold">Video Generation Coming Soon</h3>
-            <p className="text-muted-foreground max-w-lg mx-auto">
-              We're integrating cutting-edge AI video generation technology. Create stunning videos from text descriptions — perfect for social media, presentations, and creative projects.
+            <label className="text-sm font-medium flex items-center gap-2">
+              <ImageIcon className="w-4 h-4" />
+              Reference Image (optional)
+            </label>
+            <input
+              ref={fileInputRef}
+              type="file"
+              accept="image/*"
+              onChange={handleImageUpload}
+              className="hidden"
+            />
+            {referenceImage ? (
+              <div className="relative w-32 h-20 rounded-lg overflow-hidden group">
+                <img src={referenceImage} alt="Reference" className="w-full h-full object-cover" />
+                <button
+                  onClick={() => setReferenceImage(null)}
+                  className="absolute inset-0 bg-black/60 opacity-0 group-hover:opacity-100 transition-opacity flex items-center justify-center text-xs text-white"
+                >
+                  Remove
+                </button>
+              </div>
+            ) : (
+              <Button
+                variant="outline"
+                size="sm"
+                onClick={() => fileInputRef.current?.click()}
+                className="gap-2"
+              >
+                <ImageIcon className="w-4 h-4" />
+                Upload Image
+              </Button>
+            )}
+            <p className="text-xs text-muted-foreground">
+              {referenceImage ? "Image-to-video mode" : "Add an image to use image-to-video generation"}
             </p>
           </div>
 
-          {/* Features Preview */}
-          <div className="grid grid-cols-1 md:grid-cols-3 gap-4 max-w-2xl mx-auto">
-            {[
-              { title: "Text to Video", desc: "Describe your scene and watch it come to life" },
-              { title: "Custom Duration", desc: "Generate videos from 3 to 15 seconds" },
-              { title: "HD Quality", desc: "High-definition output ready for sharing" },
-            ].map((feature) => (
-              <div key={feature.title} className="p-4 rounded-xl bg-secondary/50 space-y-1">
-                <p className="font-semibold text-sm">{feature.title}</p>
-                <p className="text-xs text-muted-foreground">{feature.desc}</p>
-              </div>
-            ))}
+          {/* Prompt Input */}
+          <div className="space-y-2">
+            <label className="text-sm font-medium">Video Description</label>
+            <Textarea
+              placeholder="Describe the video you want to create... e.g. 'A cinematic aerial shot of a futuristic city at sunset'"
+              value={prompt}
+              onChange={(e) => setPrompt(e.target.value)}
+              className="min-h-[120px] bg-secondary/50 border-white/10 focus:border-accent resize-none"
+              disabled={isGenerating}
+            />
           </div>
 
-          {/* Waitlist Signup */}
-          {isJoined ? (
-            <div className="flex items-center justify-center gap-2 text-green-400">
-              <CheckCircle2 className="w-5 h-5" />
-              <span className="font-medium">You're on the waitlist! We'll notify you when it's ready.</span>
+          {/* Duration */}
+          <div className="space-y-4">
+            <div className="flex items-center justify-between">
+              <label className="text-sm font-medium flex items-center gap-2">
+                <Clock className="w-4 h-4" />
+                Duration
+              </label>
+              <span className="text-sm text-muted-foreground">{duration[0]} seconds</span>
             </div>
-          ) : (
-            <div className="max-w-md mx-auto space-y-3">
-              <p className="text-sm font-medium">Join the waitlist to get early access</p>
-              <div className="flex gap-2">
-                <div className="relative flex-1">
-                  <Mail className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-muted-foreground" />
-                  <Input
-                    type="email"
-                    placeholder="your@email.com"
-                    value={waitlistEmail}
-                    onChange={(e) => setWaitlistEmail(e.target.value)}
-                    className="pl-10 bg-secondary/50 border-white/10"
-                  />
-                </div>
-                <Button onClick={handleJoinWaitlist} className="btn-gradient">
-                  Join Waitlist
-                </Button>
+            <Slider
+              value={duration}
+              onValueChange={setDuration}
+              min={5}
+              max={10}
+              step={5}
+              className="py-4"
+              disabled={isGenerating}
+            />
+          </div>
+
+          {/* Progress */}
+          {isGenerating && (
+            <div className="space-y-2">
+              <div className="flex items-center justify-between text-sm">
+                <span className="text-muted-foreground flex items-center gap-2">
+                  <Loader2 className="w-4 h-4 animate-spin" />
+                  Generating video...
+                </span>
+                <span className="text-muted-foreground">{progress}%</span>
               </div>
+              <Progress value={progress} className="h-2" />
+              <p className="text-xs text-muted-foreground text-center">
+                This may take 1-3 minutes depending on complexity
+              </p>
             </div>
           )}
-        </div>
-      </div>
 
-      {/* Preview Generator (disabled) */}
-      <div className="glass-card p-6 md:p-8 space-y-6 max-w-4xl mx-auto opacity-50 pointer-events-none">
-        <div className="flex items-center gap-2 text-sm text-muted-foreground">
-          <AlertCircle className="w-4 h-4" />
-          Preview mode — generation disabled until launch
+          {/* Generate Button */}
+          <Button
+            onClick={handleGenerate}
+            disabled={isGenerating || !prompt.trim()}
+            className="w-full h-14 text-lg font-semibold btn-gradient"
+          >
+            {isGenerating ? (
+              <>
+                <Loader2 className="w-5 h-5 mr-2 animate-spin" />
+                Generating...
+              </>
+            ) : (
+              <>
+                <Wand2 className="w-5 h-5 mr-2" />
+                Generate Video
+              </>
+            )}
+          </Button>
         </div>
-        <div className="space-y-2">
-          <label className="text-sm font-medium">Video Description</label>
-          <Textarea
-            placeholder="Describe the video you want to create..."
-            value={prompt}
-            onChange={(e) => setPrompt(e.target.value)}
-            className="min-h-[120px] bg-secondary/50 border-white/10 resize-none"
-            disabled
-          />
-        </div>
-        <div className="space-y-4">
-          <div className="flex items-center justify-between">
-            <label className="text-sm font-medium flex items-center gap-2">
-              <Clock className="w-4 h-4" />
-              Duration
-            </label>
-            <span className="text-sm text-muted-foreground">{duration[0]} seconds</span>
+
+        {/* Generated Video Preview */}
+        {generatedVideoUrl && (
+          <div className="animate-scale-in">
+            <div className="glass-card p-4 md:p-6 space-y-4">
+              <div className="flex items-center justify-between">
+                <h3 className="font-display text-lg font-semibold flex items-center gap-2">
+                  <Sparkles className="w-5 h-5 text-accent" />
+                  Generated Video
+                </h3>
+                <Button variant="outline" size="sm" className="gap-2" onClick={handleDownload}>
+                  <Download className="w-4 h-4" />
+                  Download
+                </Button>
+              </div>
+              <div className="rounded-xl overflow-hidden bg-black">
+                <video
+                  src={generatedVideoUrl}
+                  controls
+                  autoPlay
+                  loop
+                  className="w-full aspect-video"
+                />
+              </div>
+              <p className="text-sm text-muted-foreground">{prompt}</p>
+            </div>
           </div>
-          <Slider value={duration} onValueChange={setDuration} min={3} max={15} step={1} className="py-4" disabled />
+        )}
+
+        {/* Features */}
+        <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
+          {[
+            { title: "Text to Video", desc: "Describe your scene and watch it come to life" },
+            { title: "Image to Video", desc: "Animate any image with AI-powered motion" },
+            { title: "HD Quality", desc: "High-definition 1280×768 output ready for sharing" },
+          ].map((feature) => (
+            <div key={feature.title} className="glass-card p-4 space-y-1 text-center">
+              <p className="font-semibold text-sm">{feature.title}</p>
+              <p className="text-xs text-muted-foreground">{feature.desc}</p>
+            </div>
+          ))}
         </div>
-        <Button disabled className="w-full h-14 text-lg font-semibold">
-          <Video className="w-5 h-5 mr-2" />
-          Generate Video
-        </Button>
       </div>
     </div>
   );
