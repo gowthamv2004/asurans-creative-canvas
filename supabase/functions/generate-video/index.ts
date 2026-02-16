@@ -9,37 +9,6 @@ const corsHeaders = {
 const RUNWAY_API = "https://api.dev.runwayml.com/v1";
 const RUNWAY_VERSION = "2024-11-06";
 
-async function pollTask(taskId: string, apiKey: string): Promise<any> {
-  const maxAttempts = 60; // ~5 minutes with 5s intervals
-  for (let i = 0; i < maxAttempts; i++) {
-    const res = await fetch(`${RUNWAY_API}/tasks/${taskId}`, {
-      headers: {
-        Authorization: `Bearer ${apiKey}`,
-        "X-Runway-Version": RUNWAY_VERSION,
-      },
-    });
-
-    if (!res.ok) {
-      const text = await res.text();
-      throw new Error(`Poll failed [${res.status}]: ${text}`);
-    }
-
-    const task = await res.json();
-    console.log(`Poll attempt ${i + 1}: status=${task.status}`);
-
-    if (task.status === "SUCCEEDED") {
-      return task;
-    }
-    if (task.status === "FAILED") {
-      throw new Error(task.failure || "Video generation failed");
-    }
-
-    // Wait 5 seconds before next poll
-    await new Promise((r) => setTimeout(r, 5000));
-  }
-  throw new Error("Video generation timed out");
-}
-
 serve(async (req) => {
   if (req.method === "OPTIONS") {
     return new Response(null, { headers: corsHeaders });
@@ -51,6 +20,45 @@ serve(async (req) => {
       throw new Error("RUNWAY_API_KEY is not configured");
     }
 
+    const url = new URL(req.url);
+    const action = url.searchParams.get("action") || "create";
+
+    // Poll action: check task status
+    if (action === "poll") {
+      const { taskId } = await req.json();
+      if (!taskId) {
+        return new Response(
+          JSON.stringify({ error: "taskId is required" }),
+          { status: 400, headers: { ...corsHeaders, "Content-Type": "application/json" } }
+        );
+      }
+
+      const res = await fetch(`${RUNWAY_API}/tasks/${taskId}`, {
+        headers: {
+          Authorization: `Bearer ${RUNWAY_API_KEY}`,
+          "X-Runway-Version": RUNWAY_VERSION,
+        },
+      });
+
+      if (!res.ok) {
+        const text = await res.text();
+        throw new Error(`Poll failed [${res.status}]: ${text}`);
+      }
+
+      const task = await res.json();
+      const videoUrl = task.output?.[0] || task.artifacts?.[0]?.url || null;
+
+      return new Response(
+        JSON.stringify({
+          status: task.status,
+          videoUrl: task.status === "SUCCEEDED" ? videoUrl : null,
+          failure: task.failure || null,
+        }),
+        { headers: { ...corsHeaders, "Content-Type": "application/json" } }
+      );
+    }
+
+    // Create action: start a new video generation task
     const { prompt, duration, imageUrl } = await req.json();
 
     if (!prompt) {
@@ -62,7 +70,6 @@ serve(async (req) => {
 
     console.log("Starting video generation:", { prompt, duration, hasImage: !!imageUrl });
 
-    // Decide endpoint based on whether an image is provided
     const endpoint = imageUrl ? "image_to_video" : "text_to_video";
     const body: any = {
       model: "gen4_turbo",
@@ -100,25 +107,14 @@ serve(async (req) => {
     }
 
     const createData = await createRes.json();
-    const taskId = createData.id;
-    console.log("Task created:", taskId);
-
-    // Poll until complete
-    const result = await pollTask(taskId, RUNWAY_API_KEY);
-
-    // Extract video URL from output
-    const videoUrl = result.output?.[0] || result.artifacts?.[0]?.url;
-    if (!videoUrl) {
-      console.error("Result structure:", JSON.stringify(result, null, 2));
-      throw new Error("No video URL in completed task");
-    }
+    console.log("Task created:", createData.id);
 
     return new Response(
-      JSON.stringify({ success: true, videoUrl }),
+      JSON.stringify({ success: true, taskId: createData.id }),
       { headers: { ...corsHeaders, "Content-Type": "application/json" } }
     );
   } catch (error) {
-    console.error("Error generating video:", error);
+    console.error("Error in generate-video:", error);
     return new Response(
       JSON.stringify({
         error: error instanceof Error ? error.message : "Failed to generate video",

@@ -1,4 +1,4 @@
-import { useState, useRef } from "react";
+import { useState, useRef, useCallback, useEffect } from "react";
 import { Video, Clock, Loader2, Download, Wand2, Sparkles, ImageIcon } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Textarea } from "@/components/ui/textarea";
@@ -14,15 +14,68 @@ const VideoGenerator = () => {
   const [progress, setProgress] = useState(0);
   const [generatedVideoUrl, setGeneratedVideoUrl] = useState<string | null>(null);
   const [referenceImage, setReferenceImage] = useState<string | null>(null);
+  const [taskId, setTaskId] = useState<string | null>(null);
   const fileInputRef = useRef<HTMLInputElement>(null);
+  const pollRef = useRef<ReturnType<typeof setInterval> | null>(null);
+
+  const stopPolling = useCallback(() => {
+    if (pollRef.current) {
+      clearInterval(pollRef.current);
+      pollRef.current = null;
+    }
+  }, []);
+
+  const pollForResult = useCallback((id: string) => {
+    let attempts = 0;
+    pollRef.current = setInterval(async () => {
+      attempts++;
+      setProgress(Math.min(10 + attempts * 2, 90));
+
+      try {
+        const { data, error } = await supabase.functions.invoke("generate-video?action=poll", {
+          body: { taskId: id },
+        });
+
+        if (error) throw new Error(error.message);
+        if (data?.error) throw new Error(data.error);
+
+        if (data?.status === "SUCCEEDED" && data?.videoUrl) {
+          stopPolling();
+          setProgress(100);
+          setGeneratedVideoUrl(data.videoUrl);
+          setIsGenerating(false);
+          setTaskId(null);
+          toast.success("Video generated successfully!");
+        } else if (data?.status === "FAILED") {
+          stopPolling();
+          setIsGenerating(false);
+          setTaskId(null);
+          setProgress(0);
+          toast.error(data.failure || "Video generation failed");
+        }
+        // PENDING/RUNNING: keep polling
+      } catch (err) {
+        console.error("Poll error:", err);
+        if (attempts > 60) {
+          stopPolling();
+          setIsGenerating(false);
+          setTaskId(null);
+          setProgress(0);
+          toast.error("Video generation timed out");
+        }
+      }
+    }, 5000);
+  }, [stopPolling]);
+
+  useEffect(() => {
+    return () => stopPolling();
+  }, [stopPolling]);
 
   const handleImageUpload = (e: React.ChangeEvent<HTMLInputElement>) => {
     const file = e.target.files?.[0];
     if (!file) return;
     const reader = new FileReader();
-    reader.onload = (ev) => {
-      setReferenceImage(ev.target?.result as string);
-    };
+    reader.onload = (ev) => setReferenceImage(ev.target?.result as string);
     reader.readAsDataURL(file);
   };
 
@@ -33,37 +86,23 @@ const VideoGenerator = () => {
     }
 
     setIsGenerating(true);
-    setProgress(0);
+    setProgress(5);
     setGeneratedVideoUrl(null);
-
-    // Simulate progress while waiting
-    const progressInterval = setInterval(() => {
-      setProgress((prev) => Math.min(prev + 1, 90));
-    }, 3000);
 
     try {
       const { data, error } = await supabase.functions.invoke("generate-video", {
-        body: {
-          prompt,
-          duration: duration[0],
-          imageUrl: referenceImage,
-        },
+        body: { prompt, duration: duration[0], imageUrl: referenceImage },
       });
 
-      clearInterval(progressInterval);
-
-      if (error) throw new Error(error.message || "Failed to generate video");
+      if (error) throw new Error(error.message || "Failed to start video generation");
       if (data?.error) throw new Error(data.error);
-      if (!data?.videoUrl) throw new Error("No video received");
+      if (!data?.taskId) throw new Error("No task ID received");
 
-      setProgress(100);
-      setGeneratedVideoUrl(data.videoUrl);
-      toast.success("Video generated successfully!");
+      setTaskId(data.taskId);
+      pollForResult(data.taskId);
     } catch (error) {
-      clearInterval(progressInterval);
       console.error("Video generation error:", error);
       toast.error(error instanceof Error ? error.message : "Failed to generate video");
-    } finally {
       setIsGenerating(false);
       setProgress(0);
     }
