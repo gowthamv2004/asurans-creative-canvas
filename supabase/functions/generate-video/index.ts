@@ -71,10 +71,12 @@ serve(async (req) => {
     console.log("Starting video generation:", { prompt, duration, hasImage: !!imageUrl });
 
     const endpoint = imageUrl ? "image_to_video" : "text_to_video";
+    const validDurations = [5, 8, 10];
+    const selectedDuration = validDurations.includes(duration) ? duration : 5;
     const body: any = {
-      model: "gen3a_turbo",
+      model: "gen4.5",
       ratio: "1280:720",
-      duration: duration || 5,
+      duration: selectedDuration,
     };
 
     if (imageUrl) {

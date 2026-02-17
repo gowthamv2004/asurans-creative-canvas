@@ -203,15 +203,20 @@ const VideoGenerator = () => {
               </label>
               <span className="text-sm text-muted-foreground">{duration[0]} seconds</span>
             </div>
-            <Slider
-              value={duration}
-              onValueChange={setDuration}
-              min={5}
-              max={10}
-              step={5}
-              className="py-4"
-              disabled={isGenerating}
-            />
+            <div className="flex gap-3">
+              {[5, 8, 10].map((d) => (
+                <Button
+                  key={d}
+                  variant={duration[0] === d ? "default" : "outline"}
+                  size="sm"
+                  onClick={() => setDuration([d])}
+                  disabled={isGenerating}
+                  className="flex-1"
+                >
+                  {d}s
+                </Button>
+              ))}
+            </div>
           </div>
 
           {/* Progress */}
