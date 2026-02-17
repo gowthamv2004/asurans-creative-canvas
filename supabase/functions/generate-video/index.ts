@@ -73,7 +73,7 @@ serve(async (req) => {
     const endpoint = imageUrl ? "image_to_video" : "text_to_video";
     const body: any = {
       model: "gen4_turbo",
-      ratio: "1280:768",
+      ratio: "1280:720",
       duration: duration || 5,
     };
 
