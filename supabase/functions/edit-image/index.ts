@@ -11,7 +11,9 @@ serve(async (req) => {
   }
 
   try {
-    const { prompt, imageUrl, additionalImages, editType } = await req.json();
+    const body = await req.json();
+    const { prompt, imageUrl, additionalImages, editType } = body;
+    console.log("Request body:", JSON.stringify({ prompt, editType, hasImage: !!imageUrl, hasAdditional: !!additionalImages }));
 
     if (!prompt) {
       return new Response(
@@ -84,7 +86,7 @@ serve(async (req) => {
       }
       const errorText = await response.text();
       console.error("AI gateway error:", response.status, errorText);
-      throw new Error(`AI gateway error: ${response.status}`);
+      throw new Error(`AI gateway error [${response.status}]: ${errorText}`);
     }
 
     const data = await response.json();
