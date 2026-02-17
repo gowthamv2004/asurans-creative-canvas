@@ -97,14 +97,24 @@ serve(async (req) => {
     });
 
     if (!createRes.ok) {
+      const errorText = await createRes.text();
+      console.error("Runway create error:", createRes.status, errorText);
+      
       if (createRes.status === 429) {
         return new Response(
           JSON.stringify({ error: "Rate limit exceeded. Please try again later." }),
           { status: 429, headers: { ...corsHeaders, "Content-Type": "application/json" } }
         );
       }
-      const errorText = await createRes.text();
-      console.error("Runway create error:", createRes.status, errorText);
+      
+      // Check for insufficient credits
+      if (errorText.includes("not enough credits") || errorText.includes("credits")) {
+        return new Response(
+          JSON.stringify({ error: "insufficient_credits", message: "Your Runway account doesn't have enough credits. Please add credits at runwayml.com to generate videos." }),
+          { status: 402, headers: { ...corsHeaders, "Content-Type": "application/json" } }
+        );
+      }
+      
       throw new Error(`Runway API error [${createRes.status}]: ${errorText}`);
     }
 
