@@ -95,6 +95,18 @@ const VideoGenerator = () => {
       });
 
       if (error) throw new Error(error.message || "Failed to start video generation");
+      
+      // Handle insufficient credits
+      if (data?.error === "insufficient_credits") {
+        toast.error(data.message || "Not enough Runway credits", {
+          duration: 8000,
+          description: "Visit runwayml.com to add credits to your account.",
+        });
+        setIsGenerating(false);
+        setProgress(0);
+        return;
+      }
+      
       if (data?.error) throw new Error(data.error);
       if (!data?.taskId) throw new Error("No task ID received");
 
@@ -102,7 +114,15 @@ const VideoGenerator = () => {
       pollForResult(data.taskId);
     } catch (error) {
       console.error("Video generation error:", error);
-      toast.error(error instanceof Error ? error.message : "Failed to generate video");
+      const msg = error instanceof Error ? error.message : "Failed to generate video";
+      if (msg.includes("credits")) {
+        toast.error("Insufficient Runway credits", {
+          duration: 8000,
+          description: "Visit runwayml.com to add credits to your account.",
+        });
+      } else {
+        toast.error(msg);
+      }
       setIsGenerating(false);
       setProgress(0);
     }
