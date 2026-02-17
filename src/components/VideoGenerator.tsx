@@ -284,7 +284,7 @@ const VideoGenerator = () => {
           {[
             { title: "Text to Video", desc: "Describe your scene and watch it come to life" },
             { title: "Image to Video", desc: "Animate any image with AI-powered motion" },
-            { title: "HD Quality", desc: "High-definition 1280×768 output ready for sharing" },
+            { title: "HD Quality", desc: "High-definition 1280×720 output ready for sharing" },
           ].map((feature) => (
             <div key={feature.title} className="glass-card p-4 space-y-1 text-center">
               <p className="font-semibold text-sm">{feature.title}</p>
