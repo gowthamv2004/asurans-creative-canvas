@@ -75,7 +75,7 @@ serve(async (req) => {
     const selectedDuration = validDurations.includes(duration) ? duration : 5;
     const body: any = {
       model: "gen3a_turbo",
-      ratio: "1280:720",
+      ratio: "1280:768",
       duration: selectedDuration,
     };
 
