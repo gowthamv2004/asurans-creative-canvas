@@ -107,11 +107,11 @@ serve(async (req) => {
         );
       }
       
-      // Check for insufficient credits
+      // Check for insufficient credits - return 200 so client can read the body
       if (errorText.includes("not enough credits") || errorText.includes("credits")) {
         return new Response(
           JSON.stringify({ error: "insufficient_credits", message: "Your Runway account doesn't have enough credits. Please add credits at runwayml.com to generate videos." }),
-          { status: 402, headers: { ...corsHeaders, "Content-Type": "application/json" } }
+          { status: 200, headers: { ...corsHeaders, "Content-Type": "application/json" } }
         );
       }
       
