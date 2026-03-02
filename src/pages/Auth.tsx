@@ -1,15 +1,17 @@
 import { useState, useEffect } from "react";
 import { useNavigate } from "react-router-dom";
-import { Sparkles, Mail, Lock, User, Loader2, Eye, EyeOff } from "lucide-react";
+import { Sparkles, Loader2 } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { supabase } from "@/integrations/supabase/client";
+import { lovable } from "@/integrations/lovable";
 import BackgroundVideo from "@/components/BackgroundVideo";
 import { toast } from "sonner";
 import { z } from "zod";
 
 const emailSchema = z.string().email("Please enter a valid email address");
 const passwordSchema = z.string().min(6, "Password must be at least 6 characters");
+const ADMIN_EMAIL = "admin@gmail.com";
 
 const Auth = () => {
   const [isLogin, setIsLogin] = useState(true);
@@ -20,11 +22,24 @@ const Auth = () => {
   const [showPassword, setShowPassword] = useState(false);
   const navigate = useNavigate();
 
-  // ✅ Auto redirect if already logged in
+  const syncAdminRole = async (userEmail?: string | null) => {
+    if (!userEmail || userEmail.toLowerCase() !== ADMIN_EMAIL) return;
+
+    const { data, error } = await supabase.functions.invoke("assign-admin");
+    if (error || data?.error) {
+      console.error("Admin role assignment failed:", error || data?.error);
+      toast.error("Admin role sync failed");
+      return;
+    }
+
+    toast.success("Admin access enabled");
+  };
+
   useEffect(() => {
     const { data: { subscription } } = supabase.auth.onAuthStateChange(
-      (event, session) => {
+      (_event, session) => {
         if (session?.user) {
+          void syncAdminRole(session.user.email);
           navigate("/");
         }
       }
@@ -32,6 +47,7 @@ const Auth = () => {
 
     supabase.auth.getSession().then(({ data: { session } }) => {
       if (session?.user) {
+        void syncAdminRole(session.user.email);
         navigate("/");
       }
     });
@@ -74,6 +90,7 @@ const Auth = () => {
           return;
         }
 
+        await syncAdminRole(email);
         toast.success("Welcome back!");
       } else {
         const { error } = await supabase.auth.signUp({
@@ -101,13 +118,9 @@ const Auth = () => {
     }
   };
 
-  // ✅ Google Login (Fixed Version)
   const handleGoogleLogin = async () => {
-    const { error } = await supabase.auth.signInWithOAuth({
-      provider: "google",
-      options: {
-        redirectTo: window.location.origin,
-      },
+    const { error } = await lovable.auth.signInWithOAuth("google", {
+      redirect_uri: window.location.origin,
     });
 
     if (error) {
@@ -209,3 +222,4 @@ const Auth = () => {
 };
 
 export default Auth;
+
