@@ -14,24 +14,40 @@ serve(async (req) => {
   try {
     const supabaseUrl = Deno.env.get("SUPABASE_URL")!;
     const serviceRoleKey = Deno.env.get("SUPABASE_SERVICE_ROLE_KEY")!;
-    const supabase = createClient(supabaseUrl, serviceRoleKey);
+    const anonKey = Deno.env.get("SUPABASE_ANON_KEY")!;
 
-    // Find admin user
-    const { data: users, error: userError } = await supabase.auth.admin.listUsers();
-    if (userError) throw userError;
-
-    const adminUser = users.users.find(u => u.email === "admin@gmail.com");
-    if (!adminUser) {
+    const authHeader = req.headers.get("Authorization");
+    if (!authHeader) {
       return new Response(
-        JSON.stringify({ error: "Admin user not found. Please sign up with admin@gmail.com first." }),
-        { status: 404, headers: { ...corsHeaders, "Content-Type": "application/json" } }
+        JSON.stringify({ error: "Unauthorized" }),
+        { status: 401, headers: { ...corsHeaders, "Content-Type": "application/json" } }
       );
     }
 
-    // Upsert admin role
+    const authClient = createClient(supabaseUrl, anonKey, {
+      global: { headers: { Authorization: authHeader } },
+    });
+
+    const { data: { user }, error: authError } = await authClient.auth.getUser();
+    if (authError || !user) {
+      return new Response(
+        JSON.stringify({ error: "Unauthorized" }),
+        { status: 401, headers: { ...corsHeaders, "Content-Type": "application/json" } }
+      );
+    }
+
+    if ((user.email ?? "").toLowerCase() !== "admin@gmail.com") {
+      return new Response(
+        JSON.stringify({ error: "Forbidden" }),
+        { status: 403, headers: { ...corsHeaders, "Content-Type": "application/json" } }
+      );
+    }
+
+    const supabase = createClient(supabaseUrl, serviceRoleKey);
+
     const { error } = await supabase
       .from("user_roles")
-      .upsert({ user_id: adminUser.id, role: "admin" }, { onConflict: "user_id,role" });
+      .upsert({ user_id: user.id, role: "admin" }, { onConflict: "user_id,role" });
 
     if (error) throw error;
 
