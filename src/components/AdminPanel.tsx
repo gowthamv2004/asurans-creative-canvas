@@ -5,9 +5,11 @@ import { useGeneratedImages, GeneratedImage } from "@/hooks/useGeneratedImages";
 import { downloadImage } from "@/lib/imageUtils";
 import { Button } from "@/components/ui/button";
 import { toast } from "sonner";
+import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
+import AdminUserManagement from "./AdminUserManagement";
 
 const AdminPanel = () => {
-  const { images, isLoading } = useGeneratedImages(true); // adminViewAll = true
+  const { images, isLoading } = useGeneratedImages(true);
   const [searchTerm, setSearchTerm] = useState("");
 
   // Group images by userId
@@ -54,13 +56,17 @@ const AdminPanel = () => {
         <h2 className="font-display text-4xl md:text-5xl font-bold">
           All <span className="gradient-text">User Activity</span>
         </h2>
-        <p className="text-muted-foreground max-w-2xl mx-auto">
-          View all users' image generation history across the platform.
-        </p>
       </div>
 
-      {/* Stats */}
-      <div className="grid grid-cols-1 md:grid-cols-3 gap-4 max-w-4xl mx-auto">
+      <Tabs defaultValue="overview" className="max-w-6xl mx-auto">
+        <TabsList className="grid w-full grid-cols-2 bg-secondary/50">
+          <TabsTrigger value="overview">Overview & Images</TabsTrigger>
+          <TabsTrigger value="users">User Management</TabsTrigger>
+        </TabsList>
+
+        <TabsContent value="overview" className="space-y-8 mt-6">
+          {/* Stats */}
+          <div className="grid grid-cols-1 md:grid-cols-3 gap-4 max-w-4xl mx-auto">
         <div className="glass-card p-6 text-center">
           <Users className="w-8 h-8 mx-auto text-primary mb-2" />
           <p className="text-2xl font-bold">{Object.keys(imagesByUser).length}</p>
@@ -135,6 +141,12 @@ const AdminPanel = () => {
           </div>
         )}
       </div>
+        </TabsContent>
+
+        <TabsContent value="users" className="mt-6">
+          <AdminUserManagement />
+        </TabsContent>
+      </Tabs>
     </div>
   );
 };
