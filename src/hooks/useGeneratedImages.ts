@@ -2,6 +2,7 @@ import { useState, useEffect, useCallback } from "react";
 import { supabase } from "@/integrations/supabase/client";
 import { useAuth } from "./useAuth";
 import { toast } from "sonner";
+import { uploadBase64Image } from "@/lib/storageUtils";
 
 export interface GeneratedImage {
   id: string;
@@ -80,11 +81,17 @@ export const useGeneratedImages = (adminViewAll = false) => {
     }
 
     try {
+      // Upload base64 image to storage if it's base64
+      let storedUrl = imageUrl;
+      if (imageUrl.startsWith("data:")) {
+        storedUrl = await uploadBase64Image(imageUrl, user.id);
+      }
+
       const { data, error } = await supabase
         .from("generated_images")
         .insert({
           user_id: user.id,
-          image_url: imageUrl,
+          image_url: storedUrl,
           prompt,
           style,
           generation_type: generationType,
