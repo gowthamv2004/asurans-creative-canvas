@@ -1,9 +1,45 @@
 import { serve } from "https://deno.land/std@0.168.0/http/server.ts";
+import { createClient } from "https://esm.sh/@supabase/supabase-js@2";
 
 const corsHeaders = {
   "Access-Control-Allow-Origin": "*",
   "Access-Control-Allow-Headers": "authorization, x-client-info, apikey, content-type, x-supabase-client-platform, x-supabase-client-platform-version, x-supabase-client-runtime, x-supabase-client-runtime-version",
 };
+
+async function uploadBase64ToStorage(base64Data: string, userId: string): Promise<string> {
+  const supabase = createClient(
+    Deno.env.get("SUPABASE_URL")!,
+    Deno.env.get("SUPABASE_SERVICE_ROLE_KEY")!
+  );
+
+  const match = base64Data.match(/^data:(image\/\w+);base64,(.+)$/);
+  if (!match) throw new Error("Invalid base64 image data");
+
+  const mimeType = match[1];
+  const base64Content = match[2];
+  const extension = mimeType.split("/")[1] || "png";
+
+  // Decode base64
+  const binaryString = atob(base64Content);
+  const bytes = new Uint8Array(binaryString.length);
+  for (let i = 0; i < binaryString.length; i++) {
+    bytes[i] = binaryString.charCodeAt(i);
+  }
+
+  const fileName = `${userId}/${Date.now()}-${Math.random().toString(36).slice(2, 8)}.${extension}`;
+
+  const { error } = await supabase.storage
+    .from("generated-images")
+    .upload(fileName, bytes, { contentType: mimeType, upsert: false });
+
+  if (error) throw error;
+
+  const { data: urlData } = supabase.storage
+    .from("generated-images")
+    .getPublicUrl(fileName);
+
+  return urlData.publicUrl;
+}
 
 serve(async (req) => {
   if (req.method === "OPTIONS") {
@@ -11,7 +47,7 @@ serve(async (req) => {
   }
 
   try {
-    const { prompt, style } = await req.json();
+    const { prompt, style, userId } = await req.json();
 
     if (!prompt) {
       return new Response(
@@ -25,7 +61,6 @@ serve(async (req) => {
       throw new Error("LOVABLE_API_KEY is not configured");
     }
 
-    // Build enhanced prompt with style
     const enhancedPrompt = style 
       ? `${prompt}. Style: ${style}. High quality, detailed, professional.`
       : `${prompt}. High quality, detailed, professional.`;
@@ -40,12 +75,7 @@ serve(async (req) => {
       },
       body: JSON.stringify({
         model: "google/gemini-2.5-flash-image",
-        messages: [
-          {
-            role: "user",
-            content: enhancedPrompt,
-          },
-        ],
+        messages: [{ role: "user", content: enhancedPrompt }],
         modalities: ["image", "text"],
       }),
     });
@@ -69,15 +99,12 @@ serve(async (req) => {
     }
 
     const data = await response.json();
-    console.log("AI response received:", JSON.stringify(data.choices?.[0]?.message, null, 2));
+    console.log("AI response received");
 
-    // Extract the image from the response - check multiple possible locations
     const message = data.choices?.[0]?.message;
     let imageData = message?.images?.[0]?.image_url?.url;
     
-    // Also check for inline_data format
     if (!imageData && message?.content) {
-      // Check if content contains base64 image
       const contentParts = Array.isArray(message.content) ? message.content : [message.content];
       for (const part of contentParts) {
         if (typeof part === 'object' && part.type === 'image' && part.image_url?.url) {
@@ -94,20 +121,25 @@ serve(async (req) => {
       throw new Error("No image generated in response");
     }
 
+    // Upload to storage if userId provided and image is base64
+    let finalUrl = imageData;
+    if (userId && imageData.startsWith("data:")) {
+      try {
+        finalUrl = await uploadBase64ToStorage(imageData, userId);
+        console.log("Image uploaded to storage:", finalUrl);
+      } catch (uploadErr) {
+        console.error("Storage upload failed, returning base64:", uploadErr);
+      }
+    }
+
     return new Response(
-      JSON.stringify({ 
-        success: true, 
-        imageUrl: imageData,
-        description: textContent 
-      }),
+      JSON.stringify({ success: true, imageUrl: finalUrl, description: textContent }),
       { headers: { ...corsHeaders, "Content-Type": "application/json" } }
     );
   } catch (error) {
     console.error("Error generating image:", error);
     return new Response(
-      JSON.stringify({ 
-        error: error instanceof Error ? error.message : "Failed to generate image" 
-      }),
+      JSON.stringify({ error: error instanceof Error ? error.message : "Failed to generate image" }),
       { status: 500, headers: { ...corsHeaders, "Content-Type": "application/json" } }
     );
   }

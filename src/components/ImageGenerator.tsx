@@ -31,7 +31,7 @@ const ImageGenerator = ({ onImageGenerated, saveImage, galleryImages = [] }: Ima
   const [generatedImage, setGeneratedImage] = useState<GeneratedImage | null>(null);
   const [referenceImages, setReferenceImages] = useState<string[]>([]);
 
-  const { isAuthenticated } = useAuth();
+  const { isAuthenticated, user } = useAuth();
 
   const {
     history,
@@ -65,6 +65,7 @@ const ImageGenerator = ({ onImageGenerated, saveImage, galleryImages = [] }: Ima
             imageUrl: referenceImages[0],
             additionalImages: referenceImages.slice(1),
             editType: "reference",
+            userId: user?.id,
           },
         });
         if (error) throw new Error(error.message || "Failed to generate image");
@@ -73,7 +74,7 @@ const ImageGenerator = ({ onImageGenerated, saveImage, galleryImages = [] }: Ima
         result = data;
       } else {
         const { data, error } = await supabase.functions.invoke("generate-image", {
-          body: { prompt, style: selectedPreset.prompt },
+          body: { prompt, style: selectedPreset.prompt, userId: user?.id },
         });
         if (error) throw new Error(error.message || "Failed to generate image");
         if (data?.error) throw new Error(data.error);
