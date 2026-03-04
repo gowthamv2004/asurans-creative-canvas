@@ -59,6 +59,31 @@ serve(async (req) => {
 
     const { action, targetUserId } = await req.json();
 
+    if (action === "list") {
+      // List all users with their roles
+      const { data: users, error: usersError } =
+        await adminClient.auth.admin.listUsers();
+      if (usersError) throw usersError;
+
+      const { data: allRoles } = await adminClient
+        .from("user_roles")
+        .select("*");
+
+      const userList = users.users.map((u) => ({
+        id: u.id,
+        email: u.email,
+        displayName: u.user_metadata?.display_name || null,
+        createdAt: u.created_at,
+        roles: (allRoles || [])
+          .filter((r: any) => r.user_id === u.id)
+          .map((r: any) => r.role),
+      }));
+
+      return new Response(JSON.stringify({ users: userList }), {
+        headers: { ...corsHeaders, "Content-Type": "application/json" },
+      });
+    }
+
     if (!targetUserId) {
       return new Response(JSON.stringify({ error: "targetUserId is required" }), {
         status: 400,
@@ -104,31 +129,6 @@ serve(async (req) => {
         JSON.stringify({ success: true, message: "Admin role removed" }),
         { headers: { ...corsHeaders, "Content-Type": "application/json" } }
       );
-    }
-
-    if (action === "list") {
-      // List all users with their roles
-      const { data: users, error: usersError } =
-        await adminClient.auth.admin.listUsers();
-      if (usersError) throw usersError;
-
-      const { data: allRoles } = await adminClient
-        .from("user_roles")
-        .select("*");
-
-      const userList = users.users.map((u) => ({
-        id: u.id,
-        email: u.email,
-        displayName: u.user_metadata?.display_name || null,
-        createdAt: u.created_at,
-        roles: (allRoles || [])
-          .filter((r: any) => r.user_id === u.id)
-          .map((r: any) => r.role),
-      }));
-
-      return new Response(JSON.stringify({ users: userList }), {
-        headers: { ...corsHeaders, "Content-Type": "application/json" },
-      });
     }
 
     return new Response(
