@@ -53,6 +53,7 @@ const Index = () => {
               selectedImage={selectedEnhanceImage}
               onImageSelect={setSelectedEnhanceImage}
               saveImage={saveImage}
+              galleryImages={images}
             />
           )}
           {activeTab === "admin" && isAdmin && <AdminPanel />}

@@ -1,5 +1,5 @@
 import { useState } from "react";
-import { Zap, ArrowUp, Sparkles, Loader2, Upload, Image, Wand2, Shuffle } from "lucide-react";
+import { Zap, ArrowUp, Sparkles, Loader2, Upload, Image, Wand2, Shuffle, ChevronDown } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Slider } from "@/components/ui/slider";
 import { Textarea } from "@/components/ui/textarea";
@@ -19,16 +19,18 @@ interface EnhancePanelProps {
     generationType?: string,
     parentImageId?: string
   ) => Promise<GeneratedImage | null>;
+  galleryImages?: GeneratedImage[];
 }
 
-const EnhancePanel = ({ selectedImage, onImageSelect, saveImage }: EnhancePanelProps) => {
+const EnhancePanel = ({ selectedImage, onImageSelect, saveImage, galleryImages = [] }: EnhancePanelProps) => {
   const [upscaleFactor, setUpscaleFactor] = useState([2]);
   const [isProcessing, setIsProcessing] = useState(false);
   const [enhancedImage, setEnhancedImage] = useState<string | null>(null);
   const [editPrompt, setEditPrompt] = useState("");
   const [editMode, setEditMode] = useState<"upscale" | "enhance" | "edit" | "vary">("upscale");
+  const [showGalleryPicker, setShowGalleryPicker] = useState(false);
 
-  const { isAuthenticated } = useAuth();
+  const { isAuthenticated, user } = useAuth();
 
   const callEditImage = async (prompt: string, editType: string) => {
     if (!selectedImage) {
@@ -41,6 +43,7 @@ const EnhancePanel = ({ selectedImage, onImageSelect, saveImage }: EnhancePanelP
         prompt,
         imageUrl: selectedImage.url,
         editType,
+        userId: user?.id,
       },
     });
 
@@ -119,6 +122,28 @@ const EnhancePanel = ({ selectedImage, onImageSelect, saveImage }: EnhancePanelP
     }
   };
 
+  const handleFileUpload = (e: React.ChangeEvent<HTMLInputElement>) => {
+    const file = e.target.files?.[0];
+    if (!file) return;
+
+    const reader = new FileReader();
+    reader.onload = () => {
+      const dataUrl = reader.result as string;
+      const uploaded: GeneratedImage = {
+        id: `upload-${Date.now()}`,
+        url: dataUrl,
+        prompt: "Uploaded image",
+        style: "Custom",
+        timestamp: new Date(),
+        isFavorite: false,
+        generationType: "upload",
+      };
+      onImageSelect(uploaded);
+      setEnhancedImage(null);
+    };
+    reader.readAsDataURL(file);
+  };
+
   return (
     <div className="space-y-8">
       <div className="text-center space-y-4">
@@ -140,10 +165,45 @@ const EnhancePanel = ({ selectedImage, onImageSelect, saveImage }: EnhancePanelP
           <h3 className="font-display text-xl font-semibold">Enhancement Tools</h3>
 
           {!selectedImage ? (
-            <div className="border-2 border-dashed border-white/20 rounded-xl p-8 text-center hover:border-primary/50 transition-colors">
-              <Upload className="w-10 h-10 mx-auto text-muted-foreground mb-4" />
-              <p className="text-muted-foreground mb-2">Select an image from your gallery</p>
-              <p className="text-sm text-muted-foreground">Or generate a new one to enhance</p>
+            <div className="space-y-4">
+              {/* Upload button */}
+              <label className="block border-2 border-dashed border-white/20 rounded-xl p-8 text-center hover:border-primary/50 transition-colors cursor-pointer">
+                <Upload className="w-10 h-10 mx-auto text-muted-foreground mb-4" />
+                <p className="text-muted-foreground mb-2">Click to upload an image</p>
+                <p className="text-sm text-muted-foreground">Or select from your gallery below</p>
+                <input type="file" accept="image/*" className="hidden" onChange={handleFileUpload} />
+              </label>
+
+              {/* Gallery picker */}
+              {galleryImages.length > 0 && (
+                <div className="space-y-3">
+                  <Button
+                    variant="outline"
+                    className="w-full justify-between"
+                    onClick={() => setShowGalleryPicker(!showGalleryPicker)}
+                  >
+                    <span>Select from Gallery ({galleryImages.length} images)</span>
+                    <ChevronDown className={`w-4 h-4 transition-transform ${showGalleryPicker ? "rotate-180" : ""}`} />
+                  </Button>
+                  {showGalleryPicker && (
+                    <div className="grid grid-cols-3 gap-2 max-h-60 overflow-y-auto rounded-lg p-2 bg-secondary/30">
+                      {galleryImages.map((img) => (
+                        <button
+                          key={img.id}
+                          className="aspect-square rounded-lg overflow-hidden border-2 border-transparent hover:border-primary transition-colors"
+                          onClick={() => {
+                            onImageSelect(img);
+                            setEnhancedImage(null);
+                            setShowGalleryPicker(false);
+                          }}
+                        >
+                          <img src={img.url} alt={img.prompt} className="w-full h-full object-cover" />
+                        </button>
+                      ))}
+                    </div>
+                  )}
+                </div>
+              )}
             </div>
           ) : (
             <div className="relative aspect-video rounded-xl overflow-hidden">
@@ -154,6 +214,7 @@ const EnhancePanel = ({ selectedImage, onImageSelect, saveImage }: EnhancePanelP
             </div>
           )}
 
+          {/* Mode buttons */}
           <div className="flex gap-2 flex-wrap">
             {([
               { id: "upscale", label: "Upscale", icon: ArrowUp },
@@ -161,7 +222,13 @@ const EnhancePanel = ({ selectedImage, onImageSelect, saveImage }: EnhancePanelP
               { id: "edit", label: "Edit", icon: Wand2 },
               { id: "vary", label: "Vary", icon: Shuffle },
             ] as const).map((mode) => (
-              <Button key={mode.id} variant={editMode === mode.id ? "default" : "outline"} size="sm" onClick={() => setEditMode(mode.id)} className="gap-2">
+              <Button
+                key={mode.id}
+                variant={editMode === mode.id ? "default" : "outline"}
+                size="sm"
+                onClick={() => setEditMode(mode.id)}
+                className="gap-2"
+              >
                 <mode.icon className="w-4 h-4" />
                 {mode.label}
               </Button>
@@ -190,6 +257,7 @@ const EnhancePanel = ({ selectedImage, onImageSelect, saveImage }: EnhancePanelP
             </div>
           )}
 
+          {/* Action buttons */}
           <div className="space-y-3">
             {editMode === "upscale" && (
               <Button onClick={handleUpscale} disabled={isProcessing || !selectedImage} className="w-full h-12 btn-gradient">
