@@ -1,4 +1,4 @@
-import { useState } from "react";
+import { useState, useEffect } from "react";
 import { Shield, Users, Image as ImageIcon, Search } from "lucide-react";
 import { Input } from "@/components/ui/input";
 import { useGeneratedImages, GeneratedImage } from "@/hooks/useGeneratedImages";
@@ -7,10 +7,31 @@ import { Button } from "@/components/ui/button";
 import { toast } from "sonner";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import AdminUserManagement from "./AdminUserManagement";
+import { supabase } from "@/integrations/supabase/client";
 
 const AdminPanel = () => {
   const { images, isLoading } = useGeneratedImages(true);
   const [searchTerm, setSearchTerm] = useState("");
+  const [userEmails, setUserEmails] = useState<Record<string, string>>({});
+
+  // Fetch user emails from manage-roles
+  useEffect(() => {
+    const fetchEmails = async () => {
+      try {
+        const { data } = await supabase.functions.invoke("manage-roles", {
+          body: { action: "list" },
+        });
+        if (data?.users) {
+          const map: Record<string, string> = {};
+          data.users.forEach((u: any) => {
+            map[u.id] = u.email || "";
+          });
+          setUserEmails(map);
+        }
+      } catch {}
+    };
+    fetchEmails();
+  }, []);
 
   // Group images by userId
   const imagesByUser = images.reduce((acc, img) => {
@@ -119,7 +140,7 @@ const AdminPanel = () => {
                   <span>{image.generationType}</span>
                 </div>
                 <div className="flex items-center justify-between text-xs text-muted-foreground">
-                  <span>User: {image.userId?.slice(0, 8)}...</span>
+                  <span>{image.userDisplayName || userEmails[image.userId || ""] || image.userId?.slice(0, 8) + "..."}</span>
                   <span>{image.timestamp.toLocaleDateString()}</span>
                 </div>
                 <Button
