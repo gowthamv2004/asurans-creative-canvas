@@ -15,6 +15,7 @@ export interface GeneratedImage {
   parentImageId?: string;
   userId?: string;
   userEmail?: string;
+  userDisplayName?: string;
 }
 
 export const useGeneratedImages = (adminViewAll = false) => {
@@ -32,7 +33,7 @@ export const useGeneratedImages = (adminViewAll = false) => {
     try {
       let query = supabase
         .from("generated_images")
-        .select("*")
+        .select("*, profiles!generated_images_user_id_fkey(display_name)")
         .order("created_at", { ascending: false });
 
       // If not admin view, filter by user
@@ -42,10 +43,57 @@ export const useGeneratedImages = (adminViewAll = false) => {
 
       const { data, error } = await query;
 
-      if (error) throw error;
+      if (error) {
+        // Fallback without join if FK doesn't exist
+        const { data: fallbackData, error: fallbackError } = await supabase
+          .from("generated_images")
+          .select("*")
+          .order("created_at", { ascending: false })
+          .eq("user_id", adminViewAll ? undefined as any : user.id);
+        
+        if (fallbackError) throw fallbackError;
+        
+        // If admin, fetch profiles separately
+        let profilesMap: Record<string, string> = {};
+        if (adminViewAll) {
+          const { data: profiles } = await supabase
+            .from("profiles")
+            .select("user_id, display_name");
+          if (profiles) {
+            profiles.forEach(p => { profilesMap[p.user_id] = p.display_name || ""; });
+          }
+        }
+
+        setImages(
+          (fallbackData || []).map((img) => ({
+            id: img.id,
+            url: img.image_url,
+            prompt: img.prompt,
+            style: img.style,
+            timestamp: new Date(img.created_at),
+            isFavorite: img.is_favorite,
+            generationType: img.generation_type,
+            parentImageId: img.parent_image_id || undefined,
+            userId: img.user_id,
+            userDisplayName: profilesMap[img.user_id] || undefined,
+          }))
+        );
+        return;
+      }
+
+      // If admin, also fetch profiles for email/name mapping
+      let profilesMap: Record<string, string> = {};
+      if (adminViewAll) {
+        const { data: profiles } = await supabase
+          .from("profiles")
+          .select("user_id, display_name");
+        if (profiles) {
+          profiles.forEach(p => { profilesMap[p.user_id] = p.display_name || ""; });
+        }
+      }
 
       setImages(
-        (data || []).map((img) => ({
+        (data || []).map((img: any) => ({
           id: img.id,
           url: img.image_url,
           prompt: img.prompt,
@@ -55,6 +103,7 @@ export const useGeneratedImages = (adminViewAll = false) => {
           generationType: img.generation_type,
           parentImageId: img.parent_image_id || undefined,
           userId: img.user_id,
+          userDisplayName: profilesMap[img.user_id] || img.profiles?.display_name || undefined,
         }))
       );
     } catch (error) {
