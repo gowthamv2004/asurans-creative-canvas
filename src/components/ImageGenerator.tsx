@@ -1,7 +1,13 @@
 import { useState } from "react";
-import { Sparkles, Wand2, Loader2, Download } from "lucide-react";
+import { Sparkles, Wand2, Loader2, Download, X, Maximize2 } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Textarea } from "@/components/ui/textarea";
+import {
+  Dialog,
+  DialogContent,
+  DialogHeader,
+  DialogTitle,
+} from "@/components/ui/dialog";
 import StylePresets, { StylePreset, presets } from "./StylePresets";
 import PromptHistory from "./PromptHistory";
 import ReferenceImagePicker from "./ReferenceImagePicker";
@@ -30,6 +36,7 @@ const ImageGenerator = ({ onImageGenerated, saveImage, galleryImages = [] }: Ima
   const [isGenerating, setIsGenerating] = useState(false);
   const [generatedImage, setGeneratedImage] = useState<GeneratedImage | null>(null);
   const [referenceImages, setReferenceImages] = useState<string[]>([]);
+  const [showFullImage, setShowFullImage] = useState(false);
 
   const { isAuthenticated, user } = useAuth();
 
@@ -210,8 +217,11 @@ const ImageGenerator = ({ onImageGenerated, saveImage, galleryImages = [] }: Ima
                     </Button>
                   </div>
                 </div>
-                <div className="image-card aspect-square md:aspect-video overflow-hidden rounded-xl group">
+                <div className="image-card aspect-square md:aspect-video overflow-hidden rounded-xl group cursor-pointer relative" onClick={() => setShowFullImage(true)}>
                   <img src={generatedImage.url} alt={generatedImage.prompt} className="w-full h-full object-cover transition-transform duration-500 group-hover:scale-105" />
+                  <div className="absolute inset-0 bg-black/0 group-hover:bg-black/30 transition-colors flex items-center justify-center">
+                    <Maximize2 className="w-8 h-8 text-white opacity-0 group-hover:opacity-100 transition-opacity" />
+                  </div>
                 </div>
                 <div className="flex items-center justify-between text-sm text-muted-foreground">
                   <span>Style: {generatedImage.style}</span>
@@ -235,6 +245,33 @@ const ImageGenerator = ({ onImageGenerated, saveImage, galleryImages = [] }: Ima
           />
         </div>
       </div>
+
+      {/* Full Image Popup */}
+      {generatedImage && (
+        <Dialog open={showFullImage} onOpenChange={setShowFullImage}>
+          <DialogContent className="max-w-5xl p-0 bg-transparent border-0">
+            <DialogHeader className="sr-only">
+              <DialogTitle>Full Image Preview</DialogTitle>
+            </DialogHeader>
+            <div className="relative">
+              <Button size="icon" variant="ghost" className="absolute top-4 right-4 z-20 bg-black/50 hover:bg-black/70" onClick={() => setShowFullImage(false)}>
+                <X className="w-5 h-5" />
+              </Button>
+              <img src={generatedImage.url} alt={generatedImage.prompt} className="w-full h-auto max-h-[90vh] object-contain rounded-xl" />
+              <div className="absolute bottom-0 left-0 right-0 p-6 bg-gradient-to-t from-black/80 to-transparent rounded-b-xl">
+                <p className="text-white font-medium mb-2">{generatedImage.prompt}</p>
+                <div className="flex items-center justify-between">
+                  <span className="text-white/60 text-sm">{generatedImage.style}</span>
+                  <Button size="sm" variant="secondary" className="gap-2" onClick={handleDownload}>
+                    <Download className="w-4 h-4" />
+                    Download
+                  </Button>
+                </div>
+              </div>
+            </div>
+          </DialogContent>
+        </Dialog>
+      )}
     </div>
   );
 };
