@@ -14,7 +14,7 @@ const Index = () => {
   const [activeTab, setActiveTab] = useState("generate");
   const [selectedEnhanceImage, setSelectedEnhanceImage] = useState<GeneratedImage | null>(null);
   const { isAdmin } = useUserRole();
-  const { images, saveImage, toggleFavorite, deleteImage, refetch } = useGeneratedImages();
+  const { images, isLoading, saveImage, toggleFavorite, deleteImage, refetch } = useGeneratedImages();
 
   const handleEnhanceImage = (image: GeneratedImage) => {
     setSelectedEnhanceImage(image);
@@ -43,6 +43,7 @@ const Index = () => {
           {activeTab === "gallery" && (
             <Gallery
               images={images}
+              isLoading={isLoading}
               onEnhance={handleEnhanceImage}
               onDelete={handleDeleteImage}
               toggleFavorite={toggleFavorite}
