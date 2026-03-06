@@ -1,6 +1,7 @@
 import { useState } from "react";
 import { Download, Maximize2, Trash2, Zap, X, Star } from "lucide-react";
 import { Button } from "@/components/ui/button";
+import { Skeleton } from "@/components/ui/skeleton";
 import {
   Dialog,
   DialogContent,
@@ -17,9 +18,10 @@ interface GalleryProps {
   onEnhance: (image: GeneratedImage) => void;
   onDelete: (id: string) => void;
   toggleFavorite: (id: string) => void;
+  isLoading?: boolean;
 }
 
-const Gallery = ({ images, onEnhance, onDelete, toggleFavorite }: GalleryProps) => {
+const Gallery = ({ images, onEnhance, onDelete, toggleFavorite, isLoading = false }: GalleryProps) => {
   const [selectedImage, setSelectedImage] = useState<GeneratedImage | null>(null);
   const { isAuthenticated } = useAuth();
 
@@ -31,6 +33,28 @@ const Gallery = ({ images, onEnhance, onDelete, toggleFavorite }: GalleryProps) 
       toast.error("Failed to download image");
     }
   };
+
+  if (isLoading) {
+    return (
+      <div className="space-y-8">
+        <div>
+          <Skeleton className="h-9 w-48 mb-2 bg-secondary/50" />
+          <Skeleton className="h-5 w-32 bg-secondary/50" />
+        </div>
+        <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-4">
+          {Array.from({ length: 8 }).map((_, i) => (
+            <div key={i} className="glass-card overflow-hidden rounded-xl">
+              <Skeleton className="aspect-square w-full bg-secondary/50" />
+              <div className="p-3 space-y-2">
+                <Skeleton className="h-4 w-full bg-secondary/40" />
+                <Skeleton className="h-3 w-2/3 bg-secondary/30" />
+              </div>
+            </div>
+          ))}
+        </div>
+      </div>
+    );
+  }
 
   if (images.length === 0) {
     return (
