@@ -175,7 +175,7 @@ const Auth = () => {
   };
 
   return (
-    <div className="min-h-screen bg-background flex items-center justify-center p-4">
+    <div className="min-h-screen flex items-center justify-center p-4">
       <BackgroundVideo />
 
       <div className="relative z-10 w-full max-w-md">

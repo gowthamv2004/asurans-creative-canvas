@@ -60,7 +60,7 @@ const ResetPassword = () => {
 
   if (!isRecovery) {
     return (
-      <div className="min-h-screen bg-background flex items-center justify-center p-4">
+      <div className="min-h-screen flex items-center justify-center p-4">
         <BackgroundVideo />
         <div className="relative z-10 text-center space-y-4">
           <p className="text-muted-foreground">Invalid or expired reset link.</p>
