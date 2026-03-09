@@ -91,15 +91,16 @@ const BackgroundVideo = () => {
       ctx.fillStyle = 'hsl(20, 14%, 4%)';
       ctx.fillRect(0, 0, w, h);
 
-      // Parallax-shifted nebula clouds
-      for (let i = 0; i < 4; i++) {
-        const cloudX = w * (0.15 + i * 0.25) + Math.sin(t * 0.1 + i) * 30;
-        const cloudY = h * (0.2 + i * 0.18) - scroll * PARALLAX_SPEEDS[Math.min(i, 2)] * 0.5;
-        const size = 250 + i * 50;
+      // Parallax-shifted nebula clouds — more vivid
+      for (let i = 0; i < 5; i++) {
+        const cloudX = w * (0.1 + i * 0.2) + Math.sin(t * 0.12 + i * 1.5) * 50;
+        const cloudY = h * (0.15 + i * 0.16) - scroll * PARALLAX_SPEEDS[Math.min(i, 2)] * 0.5;
+        const size = 300 + i * 60;
         const gradient = ctx.createRadialGradient(cloudX, cloudY, 0, cloudX, cloudY, size);
-        const hue = [38, 25, 45, 15][i];
-        gradient.addColorStop(0, `hsla(${hue}, 80%, 50%, 0.08)`);
-        gradient.addColorStop(0.5, `hsla(${hue}, 70%, 40%, 0.03)`);
+        const hue = [38, 20, 45, 10, 50][i];
+        gradient.addColorStop(0, `hsla(${hue}, 90%, 50%, 0.18)`);
+        gradient.addColorStop(0.3, `hsla(${hue}, 80%, 45%, 0.10)`);
+        gradient.addColorStop(0.6, `hsla(${hue}, 70%, 40%, 0.04)`);
         gradient.addColorStop(1, `hsla(${hue}, 60%, 30%, 0)`);
         ctx.fillStyle = gradient;
         ctx.fillRect(0, 0, w, h);
