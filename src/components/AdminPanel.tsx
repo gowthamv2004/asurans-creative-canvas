@@ -80,8 +80,9 @@ const AdminPanel = () => {
       </div>
 
       <Tabs defaultValue="overview" className="max-w-6xl mx-auto">
-        <TabsList className="grid w-full grid-cols-2 bg-secondary/50">
+        <TabsList className="grid w-full grid-cols-3 bg-secondary/50">
           <TabsTrigger value="overview">Overview & Images</TabsTrigger>
+          <TabsTrigger value="uploads">Uploaded Images</TabsTrigger>
           <TabsTrigger value="users">User Management</TabsTrigger>
         </TabsList>
 
