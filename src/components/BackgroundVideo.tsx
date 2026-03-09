@@ -137,9 +137,9 @@ const BackgroundVideo = () => {
         node.vy *= 0.995;
       }
 
-      // Draw connections (only within same or adjacent layers)
-      const connectionDist = 160;
-      ctx.lineWidth = 0.6;
+      // Draw connections — brighter
+      const connectionDist = 180;
+      ctx.lineWidth = 0.8;
       for (let i = 0; i < nodes.length; i++) {
         for (let j = i + 1; j < nodes.length; j++) {
           if (Math.abs(nodes[i].layer - nodes[j].layer) > 1) continue;
@@ -148,8 +148,8 @@ const BackgroundVideo = () => {
           const distSq = dx * dx + dy * dy;
           if (distSq < connectionDist * connectionDist) {
             const dist = Math.sqrt(distSq);
-            const alpha = (1 - dist / connectionDist) * 0.2;
-            ctx.strokeStyle = `hsla(38, 80%, 55%, ${alpha})`;
+            const alpha = (1 - dist / connectionDist) * 0.35;
+            ctx.strokeStyle = `hsla(38, 85%, 58%, ${alpha})`;
             ctx.beginPath();
             ctx.moveTo(nodes[i].x, nodes[i].y);
             ctx.lineTo(nodes[j].x, nodes[j].y);
