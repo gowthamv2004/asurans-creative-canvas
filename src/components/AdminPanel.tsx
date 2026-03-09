@@ -1,5 +1,5 @@
 import { useState, useEffect } from "react";
-import { Shield, Users, Image as ImageIcon, Search } from "lucide-react";
+import { Shield, Users, Image as ImageIcon, Search, Upload, Loader2 } from "lucide-react";
 import { Input } from "@/components/ui/input";
 import { useGeneratedImages, GeneratedImage } from "@/hooks/useGeneratedImages";
 import { downloadImage } from "@/lib/imageUtils";
