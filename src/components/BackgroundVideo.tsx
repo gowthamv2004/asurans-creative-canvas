@@ -91,15 +91,16 @@ const BackgroundVideo = () => {
       ctx.fillStyle = 'hsl(20, 14%, 4%)';
       ctx.fillRect(0, 0, w, h);
 
-      // Parallax-shifted nebula clouds
-      for (let i = 0; i < 4; i++) {
-        const cloudX = w * (0.15 + i * 0.25) + Math.sin(t * 0.1 + i) * 30;
-        const cloudY = h * (0.2 + i * 0.18) - scroll * PARALLAX_SPEEDS[Math.min(i, 2)] * 0.5;
-        const size = 250 + i * 50;
+      // Parallax-shifted nebula clouds — more vivid
+      for (let i = 0; i < 5; i++) {
+        const cloudX = w * (0.1 + i * 0.2) + Math.sin(t * 0.12 + i * 1.5) * 50;
+        const cloudY = h * (0.15 + i * 0.16) - scroll * PARALLAX_SPEEDS[Math.min(i, 2)] * 0.5;
+        const size = 300 + i * 60;
         const gradient = ctx.createRadialGradient(cloudX, cloudY, 0, cloudX, cloudY, size);
-        const hue = [38, 25, 45, 15][i];
-        gradient.addColorStop(0, `hsla(${hue}, 80%, 50%, 0.08)`);
-        gradient.addColorStop(0.5, `hsla(${hue}, 70%, 40%, 0.03)`);
+        const hue = [38, 20, 45, 10, 50][i];
+        gradient.addColorStop(0, `hsla(${hue}, 90%, 50%, 0.18)`);
+        gradient.addColorStop(0.3, `hsla(${hue}, 80%, 45%, 0.10)`);
+        gradient.addColorStop(0.6, `hsla(${hue}, 70%, 40%, 0.04)`);
         gradient.addColorStop(1, `hsla(${hue}, 60%, 30%, 0)`);
         ctx.fillStyle = gradient;
         ctx.fillRect(0, 0, w, h);
@@ -136,9 +137,9 @@ const BackgroundVideo = () => {
         node.vy *= 0.995;
       }
 
-      // Draw connections (only within same or adjacent layers)
-      const connectionDist = 160;
-      ctx.lineWidth = 0.6;
+      // Draw connections — brighter
+      const connectionDist = 180;
+      ctx.lineWidth = 0.8;
       for (let i = 0; i < nodes.length; i++) {
         for (let j = i + 1; j < nodes.length; j++) {
           if (Math.abs(nodes[i].layer - nodes[j].layer) > 1) continue;
@@ -147,8 +148,8 @@ const BackgroundVideo = () => {
           const distSq = dx * dx + dy * dy;
           if (distSq < connectionDist * connectionDist) {
             const dist = Math.sqrt(distSq);
-            const alpha = (1 - dist / connectionDist) * 0.2;
-            ctx.strokeStyle = `hsla(38, 80%, 55%, ${alpha})`;
+            const alpha = (1 - dist / connectionDist) * 0.35;
+            ctx.strokeStyle = `hsla(38, 85%, 58%, ${alpha})`;
             ctx.beginPath();
             ctx.moveTo(nodes[i].x, nodes[i].y);
             ctx.lineTo(nodes[j].x, nodes[j].y);
@@ -160,21 +161,22 @@ const BackgroundVideo = () => {
       // Draw nodes with glow
       for (const node of nodes) {
         const pulse = Math.sin(t * node.pulseSpeed * 60 + node.pulseOffset) * 0.3 + 0.7;
-        const r = node.radius * pulse;
-        const alpha = node.opacity * pulse;
+        const r = node.radius * pulse * 1.3;
+        const alpha = Math.min(node.opacity * pulse * 1.4, 1);
 
-        // Outer glow
-        const glow = ctx.createRadialGradient(node.x, node.y, 0, node.x, node.y, r * 8);
-        glow.addColorStop(0, node.color + (alpha * 0.5) + ')');
-        glow.addColorStop(0.4, node.color + (alpha * 0.15) + ')');
+        // Outer glow — larger and brighter
+        const glow = ctx.createRadialGradient(node.x, node.y, 0, node.x, node.y, r * 10);
+        glow.addColorStop(0, node.color + (alpha * 0.7) + ')');
+        glow.addColorStop(0.3, node.color + (alpha * 0.25) + ')');
+        glow.addColorStop(0.7, node.color + (alpha * 0.05) + ')');
         glow.addColorStop(1, node.color + '0)');
         ctx.fillStyle = glow;
         ctx.beginPath();
-        ctx.arc(node.x, node.y, r * 8, 0, Math.PI * 2);
+        ctx.arc(node.x, node.y, r * 10, 0, Math.PI * 2);
         ctx.fill();
 
         // Bright core
-        ctx.fillStyle = node.color + Math.min(alpha * 1.2, 1) + ')';
+        ctx.fillStyle = node.color + Math.min(alpha * 1.5, 1) + ')';
         ctx.beginPath();
         ctx.arc(node.x, node.y, r, 0, Math.PI * 2);
         ctx.fill();
@@ -198,8 +200,9 @@ const BackgroundVideo = () => {
         ctx.closePath();
         const grad = ctx.createLinearGradient(0, yBase - 80, 0, yBase + 120);
         grad.addColorStop(0, `hsla(38, 92%, 50%, 0)`);
-        grad.addColorStop(0.4, `hsla(${30 + i * 8}, 85%, 50%, 0.035)`);
-        grad.addColorStop(0.6, `hsla(${35 + i * 5}, 90%, 55%, 0.025)`);
+        grad.addColorStop(0.35, `hsla(${30 + i * 8}, 88%, 52%, 0.07)`);
+        grad.addColorStop(0.5, `hsla(${35 + i * 5}, 92%, 55%, 0.05)`);
+        grad.addColorStop(0.7, `hsla(${28 + i * 6}, 85%, 48%, 0.03)`);
         grad.addColorStop(1, `hsla(38, 92%, 50%, 0)`);
         ctx.fillStyle = grad;
         ctx.fill();
