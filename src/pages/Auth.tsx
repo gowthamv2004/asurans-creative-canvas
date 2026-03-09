@@ -119,12 +119,36 @@ const Auth = () => {
   };
 
   const handleGoogleLogin = async () => {
-    const { error } = await lovable.auth.signInWithOAuth("google", {
-      redirect_uri: window.location.origin,
-    });
+    const isCustomDomain =
+      !window.location.hostname.includes("lovable.app") &&
+      !window.location.hostname.includes("lovableproject.com");
 
-    if (error) {
-      toast.error(error.message || "Failed to sign in with Google");
+    if (isCustomDomain) {
+      // Bypass Lovable auth-bridge on custom domains (Vercel, localhost, etc.)
+      const { data, error } = await supabase.auth.signInWithOAuth({
+        provider: "google",
+        options: {
+          redirectTo: window.location.origin,
+          skipBrowserRedirect: true,
+        },
+      });
+
+      if (error) {
+        toast.error(error.message || "Failed to sign in with Google");
+        return;
+      }
+
+      if (data?.url) {
+        window.location.href = data.url;
+      }
+    } else {
+      const { error } = await lovable.auth.signInWithOAuth("google", {
+        redirect_uri: window.location.origin,
+      });
+
+      if (error) {
+        toast.error(error.message || "Failed to sign in with Google");
+      }
     }
   };
 
