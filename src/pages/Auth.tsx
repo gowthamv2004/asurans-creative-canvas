@@ -119,12 +119,58 @@ const Auth = () => {
   };
 
   const handleGoogleLogin = async () => {
-    const { error } = await lovable.auth.signInWithOAuth("google", {
-      redirect_uri: window.location.origin,
-    });
+    const isLovableDomain =
+      window.location.hostname.includes("lovable.app") ||
+      window.location.hostname.includes("lovableproject.com");
 
-    if (error) {
-      toast.error(error.message || "Failed to sign in with Google");
+    if (isLovableDomain) {
+      // Use Lovable's managed OAuth on Lovable domains
+      const { error } = await lovable.auth.signInWithOAuth("google", {
+        redirect_uri: window.location.origin,
+      });
+      if (error) {
+        toast.error(error.message || "Failed to sign in with Google");
+      }
+    } else {
+      // On custom domains (Vercel, etc.), use popup-based OAuth
+      try {
+        const { data, error } = await supabase.auth.signInWithOAuth({
+          provider: "google",
+          options: {
+            skipBrowserRedirect: true,
+            redirectTo: window.location.origin,
+          },
+        });
+
+        if (error) {
+          toast.error(error.message || "Failed to sign in with Google");
+          return;
+        }
+
+        if (data?.url) {
+          // Open OAuth in popup to bypass iframe/cookie restrictions
+          const popup = window.open(data.url, "google-oauth", "width=500,height=600,scrollbars=yes");
+          
+          if (!popup) {
+            toast.error("Please allow popups for this site to sign in with Google");
+            return;
+          }
+
+          // Poll for popup close and check for session
+          const pollTimer = setInterval(async () => {
+            if (popup.closed) {
+              clearInterval(pollTimer);
+              const { data: sessionData } = await supabase.auth.getSession();
+              if (sessionData?.session) {
+                toast.success("Signed in with Google!");
+                navigate("/");
+              }
+            }
+          }, 500);
+        }
+      } catch (err: any) {
+        toast.error(err.message || "Failed to sign in with Google");
+      }
     }
   };
 
