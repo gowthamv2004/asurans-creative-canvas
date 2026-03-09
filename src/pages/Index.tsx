@@ -39,7 +39,7 @@ const Index = () => {
               galleryImages={images}
             />
           )}
-          {activeTab === "video" && <VideoGenerator />}
+          
           {activeTab === "gallery" && (
             <Gallery
               images={images}

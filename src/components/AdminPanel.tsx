@@ -165,6 +165,10 @@ const AdminPanel = () => {
       </div>
         </TabsContent>
 
+        <TabsContent value="uploads" className="mt-6">
+          <AdminUploadsView />
+        </TabsContent>
+
         <TabsContent value="users" className="mt-6">
           <AdminUserManagement />
         </TabsContent>

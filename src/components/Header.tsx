@@ -1,4 +1,4 @@
-import { Sparkles, Image, Video, Grid3X3, Zap, LogIn, LogOut, User, Shield } from "lucide-react";
+import { Sparkles, Image, Grid3X3, Zap, LogIn, LogOut, User, Shield } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { useAuth } from "@/hooks/useAuth";
 import { useNavigate } from "react-router-dom";
