@@ -15,7 +15,6 @@ const Header = ({ activeTab, onTabChange, isAdmin = false }: HeaderProps) => {
 
   const navItems = [
     { id: "generate", label: "Generate", icon: Sparkles },
-    { id: "video", label: "Video", icon: Video },
     { id: "gallery", label: "Gallery", icon: Grid3X3 },
     { id: "enhance", label: "Enhance", icon: Zap },
     ...(isAdmin ? [{ id: "admin", label: "Admin", icon: Shield }] : []),
