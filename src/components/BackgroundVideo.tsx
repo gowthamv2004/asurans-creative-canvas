@@ -200,8 +200,9 @@ const BackgroundVideo = () => {
         ctx.closePath();
         const grad = ctx.createLinearGradient(0, yBase - 80, 0, yBase + 120);
         grad.addColorStop(0, `hsla(38, 92%, 50%, 0)`);
-        grad.addColorStop(0.4, `hsla(${30 + i * 8}, 85%, 50%, 0.035)`);
-        grad.addColorStop(0.6, `hsla(${35 + i * 5}, 90%, 55%, 0.025)`);
+        grad.addColorStop(0.35, `hsla(${30 + i * 8}, 88%, 52%, 0.07)`);
+        grad.addColorStop(0.5, `hsla(${35 + i * 5}, 92%, 55%, 0.05)`);
+        grad.addColorStop(0.7, `hsla(${28 + i * 6}, 85%, 48%, 0.03)`);
         grad.addColorStop(1, `hsla(38, 92%, 50%, 0)`);
         ctx.fillStyle = grad;
         ctx.fill();
