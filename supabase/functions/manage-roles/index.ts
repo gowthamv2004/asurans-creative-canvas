@@ -57,7 +57,7 @@ serve(async (req) => {
       });
     }
 
-    const { action, targetUserId } = await req.json();
+    const { action, targetUserId, newPassword } = await req.json();
 
     if (action === "list") {
       // List all users with their roles
@@ -107,7 +107,6 @@ serve(async (req) => {
     }
 
     if (action === "demote") {
-      // Prevent self-demotion
       if (targetUserId === caller.id) {
         return new Response(
           JSON.stringify({ error: "Cannot demote yourself" }),
@@ -131,8 +130,31 @@ serve(async (req) => {
       );
     }
 
+    if (action === "reset-password") {
+      if (!newPassword || newPassword.length < 6) {
+        return new Response(
+          JSON.stringify({ error: "Password must be at least 6 characters" }),
+          {
+            status: 400,
+            headers: { ...corsHeaders, "Content-Type": "application/json" },
+          }
+        );
+      }
+
+      const { error } = await adminClient.auth.admin.updateUserById(
+        targetUserId,
+        { password: newPassword }
+      );
+      if (error) throw error;
+
+      return new Response(
+        JSON.stringify({ success: true, message: "Password reset successfully" }),
+        { headers: { ...corsHeaders, "Content-Type": "application/json" } }
+      );
+    }
+
     return new Response(
-      JSON.stringify({ error: "Invalid action. Use: list, promote, demote" }),
+      JSON.stringify({ error: "Invalid action. Use: list, promote, demote, reset-password" }),
       {
         status: 400,
         headers: { ...corsHeaders, "Content-Type": "application/json" },

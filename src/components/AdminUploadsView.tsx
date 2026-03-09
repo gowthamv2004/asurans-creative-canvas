@@ -1,5 +1,5 @@
 import { useState, useEffect } from "react";
-import { Upload, Loader2, Download, Trash2 } from "lucide-react";
+import { Upload, Loader2, Download } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { supabase } from "@/integrations/supabase/client";
 import { toast } from "sonner";

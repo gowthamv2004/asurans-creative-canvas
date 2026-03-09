@@ -1,10 +1,17 @@
 import { useState, useEffect } from "react";
-import { Shield, ShieldOff, Users, Loader2, Search } from "lucide-react";
+import { Shield, ShieldOff, Users, Loader2, Search, KeyRound } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Badge } from "@/components/ui/badge";
 import { supabase } from "@/integrations/supabase/client";
 import { toast } from "sonner";
+import {
+  Dialog,
+  DialogContent,
+  DialogHeader,
+  DialogTitle,
+  DialogFooter,
+} from "@/components/ui/dialog";
 
 interface UserItem {
   id: string;
@@ -19,6 +26,9 @@ const AdminUserManagement = () => {
   const [isLoading, setIsLoading] = useState(true);
   const [actionLoading, setActionLoading] = useState<string | null>(null);
   const [searchTerm, setSearchTerm] = useState("");
+  const [resetDialog, setResetDialog] = useState<{ open: boolean; user: UserItem | null }>({ open: false, user: null });
+  const [newPassword, setNewPassword] = useState("");
+  const [resetLoading, setResetLoading] = useState(false);
 
   const fetchUsers = async () => {
     setIsLoading(true);
@@ -61,6 +71,27 @@ const AdminUserManagement = () => {
       toast.error(err.message || "Failed to update role");
     } finally {
       setActionLoading(null);
+    }
+  };
+
+  const handleResetPassword = async () => {
+    if (!resetDialog.user || !newPassword) return;
+    setResetLoading(true);
+    try {
+      const { data, error } = await supabase.functions.invoke("manage-roles", {
+        body: { action: "reset-password", targetUserId: resetDialog.user.id, newPassword },
+      });
+
+      if (error) throw new Error(error.message);
+      if (data?.error) throw new Error(data.error);
+
+      toast.success(data.message);
+      setResetDialog({ open: false, user: null });
+      setNewPassword("");
+    } catch (err: any) {
+      toast.error(err.message || "Failed to reset password");
+    } finally {
+      setResetLoading(false);
     }
   };
 
@@ -131,7 +162,20 @@ const AdminUserManagement = () => {
                 </p>
               </div>
 
-              <div>
+              <div className="flex items-center gap-2">
+                <Button
+                  variant="outline"
+                  size="sm"
+                  onClick={() => {
+                    setResetDialog({ open: true, user });
+                    setNewPassword("");
+                  }}
+                  className="gap-1 text-xs"
+                >
+                  <KeyRound className="w-3 h-3" />
+                  Reset Password
+                </Button>
+
                 {isAdmin ? (
                   <Button
                     variant="outline"
@@ -174,6 +218,40 @@ const AdminUserManagement = () => {
           </p>
         )}
       </div>
+
+      {/* Reset Password Dialog */}
+      <Dialog open={resetDialog.open} onOpenChange={(open) => setResetDialog({ open, user: open ? resetDialog.user : null })}>
+        <DialogContent className="bg-background border-white/10">
+          <DialogHeader>
+            <DialogTitle>Reset Password</DialogTitle>
+          </DialogHeader>
+          <div className="space-y-4 py-4">
+            <p className="text-sm text-muted-foreground">
+              Reset password for <span className="font-medium text-foreground">{resetDialog.user?.email}</span>
+            </p>
+            <Input
+              type="password"
+              placeholder="New password (min 6 characters)"
+              value={newPassword}
+              onChange={(e) => setNewPassword(e.target.value)}
+              className="bg-secondary/50 border-white/10"
+            />
+          </div>
+          <DialogFooter>
+            <Button variant="outline" onClick={() => setResetDialog({ open: false, user: null })}>
+              Cancel
+            </Button>
+            <Button
+              onClick={handleResetPassword}
+              disabled={resetLoading || newPassword.length < 6}
+              className="btn-gradient"
+            >
+              {resetLoading ? <Loader2 className="w-4 h-4 animate-spin mr-2" /> : null}
+              Reset Password
+            </Button>
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
     </div>
   );
 };
