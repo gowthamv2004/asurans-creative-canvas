@@ -1,7 +1,7 @@
 import { useState } from "react";
 import Header from "@/components/Header";
 import ImageGenerator from "@/components/ImageGenerator";
-import VideoGenerator from "@/components/VideoGenerator";
+
 import Gallery from "@/components/Gallery";
 import EnhancePanel from "@/components/EnhancePanel";
 import AdminPanel from "@/components/AdminPanel";
@@ -39,7 +39,7 @@ const Index = () => {
               galleryImages={images}
             />
           )}
-          {activeTab === "video" && <VideoGenerator />}
+          
           {activeTab === "gallery" && (
             <Gallery
               images={images}

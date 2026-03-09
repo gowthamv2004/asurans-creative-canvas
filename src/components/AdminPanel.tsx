@@ -7,6 +7,7 @@ import { Button } from "@/components/ui/button";
 import { toast } from "sonner";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import AdminUserManagement from "./AdminUserManagement";
+import AdminUploadsView from "./AdminUploadsView";
 import { supabase } from "@/integrations/supabase/client";
 
 const AdminPanel = () => {
@@ -80,8 +81,9 @@ const AdminPanel = () => {
       </div>
 
       <Tabs defaultValue="overview" className="max-w-6xl mx-auto">
-        <TabsList className="grid w-full grid-cols-2 bg-secondary/50">
+        <TabsList className="grid w-full grid-cols-3 bg-secondary/50">
           <TabsTrigger value="overview">Overview & Images</TabsTrigger>
+          <TabsTrigger value="uploads">Uploaded Images</TabsTrigger>
           <TabsTrigger value="users">User Management</TabsTrigger>
         </TabsList>
 
@@ -162,6 +164,10 @@ const AdminPanel = () => {
           </div>
         )}
       </div>
+        </TabsContent>
+
+        <TabsContent value="uploads" className="mt-6">
+          <AdminUploadsView />
         </TabsContent>
 
         <TabsContent value="users" className="mt-6">
