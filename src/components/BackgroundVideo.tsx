@@ -161,21 +161,22 @@ const BackgroundVideo = () => {
       // Draw nodes with glow
       for (const node of nodes) {
         const pulse = Math.sin(t * node.pulseSpeed * 60 + node.pulseOffset) * 0.3 + 0.7;
-        const r = node.radius * pulse;
-        const alpha = node.opacity * pulse;
+        const r = node.radius * pulse * 1.3;
+        const alpha = Math.min(node.opacity * pulse * 1.4, 1);
 
-        // Outer glow
-        const glow = ctx.createRadialGradient(node.x, node.y, 0, node.x, node.y, r * 8);
-        glow.addColorStop(0, node.color + (alpha * 0.5) + ')');
-        glow.addColorStop(0.4, node.color + (alpha * 0.15) + ')');
+        // Outer glow — larger and brighter
+        const glow = ctx.createRadialGradient(node.x, node.y, 0, node.x, node.y, r * 10);
+        glow.addColorStop(0, node.color + (alpha * 0.7) + ')');
+        glow.addColorStop(0.3, node.color + (alpha * 0.25) + ')');
+        glow.addColorStop(0.7, node.color + (alpha * 0.05) + ')');
         glow.addColorStop(1, node.color + '0)');
         ctx.fillStyle = glow;
         ctx.beginPath();
-        ctx.arc(node.x, node.y, r * 8, 0, Math.PI * 2);
+        ctx.arc(node.x, node.y, r * 10, 0, Math.PI * 2);
         ctx.fill();
 
         // Bright core
-        ctx.fillStyle = node.color + Math.min(alpha * 1.2, 1) + ')';
+        ctx.fillStyle = node.color + Math.min(alpha * 1.5, 1) + ')';
         ctx.beginPath();
         ctx.arc(node.x, node.y, r, 0, Math.PI * 2);
         ctx.fill();
